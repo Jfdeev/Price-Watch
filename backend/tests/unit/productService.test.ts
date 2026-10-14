@@ -8,7 +8,8 @@ vi.mock("../../src/prisma/client", () => ({
         externalId: create.externalId
       })),
       findFirst: vi.fn(async () => null),
-      findMany: vi.fn(async () => [])
+      findMany: vi.fn(async () => []),
+      count: vi.fn(async () => 0)
     }
   }
 }));

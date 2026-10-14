@@ -564,60 +564,89 @@ export async function searchProducts(
       : {})
   };
 
-  const localMatches = await prisma.product.findMany({
-    where: localWhere,
-    orderBy: {
-      createdAt: "desc"
-    },
-    select: {
-      id: true,
-      externalId: true,
-      name: true,
-      price: true,
-      imageUrl: true,
-      productUrl: true,
-      storeName: true,
-      category: true,
-      priceHistory: {
-        orderBy: {
-          capturedAt: "desc"
-        },
-        take: 1,
-        select: {
-          oldPrice: true,
-          newPrice: true
+  const [localMatches, localCount] = await Promise.all([
+    prisma.product.findMany({
+      where: localWhere,
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: limit,
+      select: {
+        id: true,
+        externalId: true,
+        name: true,
+        price: true,
+        imageUrl: true,
+        productUrl: true,
+        storeName: true,
+        category: true,
+        priceHistory: {
+          orderBy: {
+            capturedAt: "desc"
+          },
+          take: 1,
+          select: {
+            oldPrice: true,
+            newPrice: true
+          }
         }
       }
-    }
-  });
+    }),
+    prisma.product.count({ where: localWhere })
+  ]);
 
   const localDtos = localMatches.map(mapSavedProduct);
-
-  const mergedByExternalId = new Map<string, ProductDTO>();
-  for (const local of localDtos) {
-    mergedByExternalId.set(local.externalId, local);
-  }
+  const localExternalIds = new Set(localDtos.map((local) => local.externalId));
+  const externalByExternalId = new Map<string, ProductDTO>();
   for (const external of productsToReturn.filter(Boolean) as ProductDTO[]) {
-    if (!mergedByExternalId.has(external.externalId)) {
-      mergedByExternalId.set(external.externalId, external);
+    if (!externalByExternalId.has(external.externalId)) {
+      externalByExternalId.set(external.externalId, external);
     }
   }
 
-  const mergedProducts = Array.from(mergedByExternalId.values());
-  const paginatedProducts = mergedProducts.slice(0, limit);
+  const externalOnly = Array.from(externalByExternalId.values()).filter(
+    (external) => !localExternalIds.has(external.externalId)
+  );
+  const paginatedProducts = [...localDtos, ...externalOnly].slice(0, limit);
 
-  const totalResults = searchResult.totalResults;
+  const knowsAllLocals = localCount <= limit;
+  const knownMergedCount = localDtos.length + externalOnly.length;
+  const exceedsLimit = !knowsAllLocals || knownMergedCount > limit;
+
+  let totalResults = searchResult.totalResults;
+  if (totalResults === undefined || totalResults === null) {
+    totalResults = knowsAllLocals
+      ? knownMergedCount
+      : await countMergedProducts(localWhere, localCount, Array.from(externalByExternalId.keys()));
+  }
 
   return {
     source: "serpapi",
     products: paginatedProducts,
     page,
     limit,
-    hasNextPage: searchResult.hasNextPage || mergedProducts.length > limit,
+    hasNextPage: searchResult.hasNextPage || exceedsLimit,
     hasPreviousPage: searchResult.hasPreviousPage,
-    totalResults: totalResults ?? mergedProducts.length,
-    totalPages: totalResults ? Math.max(1, Math.ceil(totalResults / limit)) : undefined
+    totalResults,
+    totalPages: searchResult.totalResults
+      ? Math.max(1, Math.ceil(searchResult.totalResults / limit))
+      : undefined
   };
+}
+
+async function countMergedProducts(
+  localWhere: Prisma.ProductWhereInput,
+  localCount: number,
+  externalIds: string[]
+): Promise<number> {
+  if (externalIds.length === 0) {
+    return localCount;
+  }
+
+  const overlap = await prisma.product.count({
+    where: { AND: [localWhere, { externalId: { in: externalIds } }] }
+  });
+  return localCount + externalIds.length - overlap;
 }
 
 export async function getShowcaseProducts(page = 1, limit = 8): Promise<ProductSearchResult> {
