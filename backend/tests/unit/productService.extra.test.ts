@@ -16,16 +16,18 @@ vi.mock("../../src/prisma/client", () => ({
       findFirst: vi.fn(async () => null),
       findMany: vi.fn(async () => []),
       count: vi.fn(async () => 0),
-      create: vi.fn(async ({ data }: { data: { externalId: string; name: string; price: number } }) => ({
-        id: `db-${data.externalId}`,
-        externalId: data.externalId,
-        name: data.name,
-        price: data.price,
-        imageUrl: null,
-        productUrl: null,
-        storeName: null,
-        category: null
-      })),
+      create: vi.fn(
+        async ({ data }: { data: { externalId: string; name: string; price: number } }) => ({
+          id: `db-${data.externalId}`,
+          externalId: data.externalId,
+          name: data.name,
+          price: data.price,
+          imageUrl: null,
+          productUrl: null,
+          storeName: null,
+          category: null
+        })
+      ),
       update: vi.fn(async () => ({
         id: "db-id",
         externalId: "db-ext",
@@ -63,6 +65,10 @@ vi.mock("../../src/prisma/client", () => ({
       findFirst: vi.fn(async () => ({ id: "c1" }))
     }
   }
+}));
+
+vi.mock("../../src/services/productBatchUpsert", () => ({
+  upsertProductsBatch: vi.fn(async () => undefined)
 }));
 
 import { prisma } from "../../src/prisma/client";

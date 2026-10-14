@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { upsertProductsBatch } from "../../src/services/productService";
+import { upsertProductsBatch } from "../../src/services/productBatchUpsert";
 import { upsertProduct as legacyUpsertProduct } from "../../bench/legacy/productService";
 import {
   isConsistentOrder,

@@ -1,6 +1,7 @@
 import { prisma } from "../prisma/client";
 import { randomUUID } from "node:crypto";
 import { normalizeProductUrl, toNormalizedProductUrlColumn } from "./productUrl";
+import { upsertProductsBatch } from "./productBatchUpsert";
 
 type SerpApiShoppingResult = {
   title: string;
@@ -752,16 +753,6 @@ export async function upsertProduct(product: ProductDTO): Promise<string> {
   }
 
   return savedProduct.id;
-}
-
-export async function upsertProductsBatch(products: ProductDTO[]): Promise<void> {
-  for (const product of products) {
-    try {
-      await upsertProduct(product);
-    } catch {
-      continue;
-    }
-  }
 }
 
 export type CreateProductInput = {

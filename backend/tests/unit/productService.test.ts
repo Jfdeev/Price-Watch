@@ -13,6 +13,11 @@ vi.mock("../../src/prisma/client", () => ({
   }
 }));
 
+vi.mock("../../src/services/productBatchUpsert", () => ({
+  upsertProductsBatch: vi.fn(async () => undefined)
+}));
+
+import { upsertProductsBatch } from "../../src/services/productBatchUpsert";
 import { searchProducts } from "../../src/services/productService";
 
 describe("productService", () => {
@@ -75,6 +80,10 @@ describe("productService", () => {
     expect(result.limit).toBe(8);
     expect(result.hasNextPage).toBe(true);
     expect(result.hasPreviousPage).toBe(false);
+    expect(upsertProductsBatch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(upsertProductsBatch).mock.calls[0][0]).toEqual([
+      expect.objectContaining({ externalId: "123456", price: 3999 })
+    ]);
   });
 
   it("requests the correct SerpApi start offset for later pages", async () => {
@@ -85,7 +94,8 @@ describe("productService", () => {
         JSON.stringify({
           shopping_results: [],
           serpapi_pagination: {
-            previous_link: "https://serpapi.com/search.json?engine=google_shopping&q=notebook&start=0"
+            previous_link:
+              "https://serpapi.com/search.json?engine=google_shopping&q=notebook&start=0"
           }
         }),
         {
