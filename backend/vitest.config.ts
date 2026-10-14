@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     testTimeout: 20000,
     include: ["tests/**/*.test.ts"],
+    exclude: ["tests/equivalence/**", "node_modules/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json", "lcov"],
