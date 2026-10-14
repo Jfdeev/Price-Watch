@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma/client";
 import { randomUUID } from "node:crypto";
 import { normalizeProductUrl, toNormalizedProductUrlColumn } from "./productUrl";
@@ -765,6 +766,20 @@ export type CreateProductInput = {
   ownerUserId: string;
 };
 
+async function hasAnyActiveStore(): Promise<boolean> {
+  const rows = await prisma.$queryRaw<Array<{ found: number }>>(
+    Prisma.sql`SELECT 1 AS found FROM "Store" WHERE "isActive" LIMIT 1`
+  );
+  return rows.length > 0;
+}
+
+async function hasActiveStoreNamed(name: string): Promise<boolean> {
+  const rows = await prisma.$queryRaw<Array<{ found: number }>>(
+    Prisma.sql`SELECT 1 AS found FROM "Store" WHERE "isActive" AND lower("name") = lower(${name}) LIMIT 1`
+  );
+  return rows.length > 0;
+}
+
 export async function createProduct(input: CreateProductInput): Promise<ProductDTO> {
   const normalizedName = input.name.trim();
 
@@ -776,12 +791,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
     throw new Error("Preço inválido.");
   }
 
-  const activeStores = await prisma.store.findMany({
-    where: { isActive: true },
-    select: { name: true }
-  });
-
-  if (activeStores.length === 0) {
+  if (!(await hasAnyActiveStore())) {
     throw new Error("Cadastre ao menos uma loja ativa antes de criar um produto.");
   }
 
@@ -790,10 +800,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
     throw new Error("Selecione uma loja ativa para cadastrar o produto.");
   }
 
-  const storeExists = activeStores.some(
-    (store) => store.name.toLowerCase() === normalizedStoreName.toLowerCase()
-  );
-  if (!storeExists) {
+  if (!(await hasActiveStoreNamed(normalizedStoreName))) {
     throw new Error("A loja selecionada não está ativa ou não existe.");
   }
 

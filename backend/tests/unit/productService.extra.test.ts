@@ -58,9 +58,9 @@ vi.mock("../../src/prisma/client", () => ({
       count: vi.fn(async () => 0)
     },
     store: {
-      findMany: vi.fn(async () => [{ name: "Loja A" }]),
       findFirst: vi.fn(async () => ({ id: "s1" }))
     },
+    $queryRaw: vi.fn(async () => [{ found: 1 }]),
     category: {
       findFirst: vi.fn(async () => ({ id: "c1" }))
     }

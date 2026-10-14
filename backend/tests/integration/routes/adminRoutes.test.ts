@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import request from "supertest";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { app } from "../../../src/app";
 import { prisma } from "../../../src/prisma/client";
 
@@ -188,11 +188,11 @@ describe("admin routes", () => {
     });
     Object.defineProperty(prisma, "store", {
       value: {
-        findMany: async () => [{ name: "Loja A" }],
         findFirst: async () => ({ id: "store-1" })
       },
       configurable: true
     });
+    const queryRaw = vi.spyOn(prisma, "$queryRaw").mockResolvedValue([{ found: 1 }] as never);
 
     const response = await request(app)
       .post("/products")
@@ -205,6 +205,8 @@ describe("admin routes", () => {
 
     expect(response.status).toBe(201);
     expect(response.body.id).toBe("prod-1");
+    expect(queryRaw).toHaveBeenCalledTimes(2);
+    queryRaw.mockRestore();
   });
 
   it("DELETE /products/:id permite admin quando sem dependencias", async () => {
