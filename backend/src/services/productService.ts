@@ -1,5 +1,6 @@
 import { prisma } from "../prisma/client";
 import { randomUUID } from "node:crypto";
+import { normalizeProductUrl } from "./productUrl";
 
 type SerpApiShoppingResult = {
   title: string;
@@ -288,20 +289,6 @@ function mapSerpApiItem(item: SerpApiShoppingResult): ProductDTO {
     storeName: item.source ?? "SerpApi",
     category: undefined
   };
-}
-
-function normalizeProductUrl(value?: string | null): string {
-  if (value === undefined || value === null || value === "") {
-    return "";
-  }
-
-  try {
-    const url = new URL(value);
-    const normalized = `${url.origin}${url.pathname}${url.search}`;
-    return normalized.toLowerCase();
-  } catch {
-    return value.trim().toLowerCase();
-  }
 }
 
 function mapSavedProduct(savedProduct: {
