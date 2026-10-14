@@ -2,12 +2,12 @@ import { Heart } from "lucide-react";
 import { ProductCard } from "../components/ProductCard";
 import { EmptyState } from "../components/EmptyState";
 import { useNavigate } from "react-router-dom";
-import { listFavorites, mapProductToCard } from "../services/api";
+import { listFavorites, mapProductToCard, type Favorite } from "../services/api";
 import { useEffect, useState } from "react";
 
 export function FavoritesPage() {
   const navigate = useNavigate();
-  const [favorites, setFavorites] = useState<Record<string, unknown>[]>([]);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
 
   useEffect(() => {
     async function load() {
