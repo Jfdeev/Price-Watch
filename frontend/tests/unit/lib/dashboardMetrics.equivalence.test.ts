@@ -14,7 +14,11 @@ describe("computeDashboardMetrics (F7) equivale à versão original", () => {
 
   it.each([1, 2, 7, 50, 333, 2000])("retorna o mesmo resultado para n=%i", (size) => {
     for (let seed = 1; seed <= 20; seed += 1) {
-      const { priceHistory, alerts, favorites } = generateDashboardInput(seed * 7919 + size, size, NOW);
+      const { priceHistory, alerts, favorites } = generateDashboardInput(
+        seed * 7919 + size,
+        size,
+        NOW
+      );
       const expected = legacyComputeDashboardMetrics(priceHistory, alerts, favorites, NOW);
       const actual = computeDashboardMetrics(priceHistory, alerts, favorites, NOW);
       expect(actual).toEqual(expected);

@@ -6,9 +6,14 @@ export function monthBoundaryDates(now: Date): string[] {
   const previousStart = new Date(year, month - 1, 1).getTime();
   const currentStart = new Date(year, month, 1).getTime();
   const nextStart = new Date(year, month + 1, 1).getTime();
-  return [previousStart, currentStart, nextStart, previousStart - 1, currentStart - 1, nextStart - 1].map(
-    (timestamp) => new Date(timestamp).toISOString()
-  );
+  return [
+    previousStart,
+    currentStart,
+    nextStart,
+    previousStart - 1,
+    currentStart - 1,
+    nextStart - 1
+  ].map((timestamp) => new Date(timestamp).toISOString());
 }
 
 function randomDate(random: () => number, now: Date, boundaries: string[]): string {
