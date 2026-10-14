@@ -7,13 +7,31 @@ export type MetricsHistoryEntry = {
 export type MetricsAlert = { isActive: boolean; createdAt: string };
 export type MetricsFavorite = { createdAt: string };
 
-function getMonthStart(baseDate: Date): Date {
-  return new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+type MonthWindows = { previousStart: number; currentStart: number; nextStart: number };
+
+const OUTSIDE = 0;
+const CURRENT = 1;
+const PREVIOUS = 2;
+
+function buildMonthWindows(now: Date): MonthWindows {
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  return {
+    previousStart: new Date(year, month - 1, 1).getTime(),
+    currentStart: new Date(year, month, 1).getTime(),
+    nextStart: new Date(year, month + 1, 1).getTime()
+  };
 }
 
-function isInRange(dateValue: string, start: Date, end: Date): boolean {
-  const date = new Date(dateValue);
-  return date >= start && date < end;
+function classify(dateValue: string, windows: MonthWindows): number {
+  const time = new Date(dateValue).getTime();
+  if (time >= windows.currentStart && time < windows.nextStart) {
+    return CURRENT;
+  }
+  if (time >= windows.previousStart && time < windows.currentStart) {
+    return PREVIOUS;
+  }
+  return OUTSIDE;
 }
 
 export function computeDashboardMetrics(
@@ -22,65 +40,62 @@ export function computeDashboardMetrics(
   favorites: MetricsFavorite[],
   now: Date
 ) {
-  const currentMonthStart = getMonthStart(now);
-  const nextMonthStart = new Date(
-    currentMonthStart.getFullYear(),
-    currentMonthStart.getMonth() + 1,
-    1
-  );
-  const previousMonthStart = new Date(
-    currentMonthStart.getFullYear(),
-    currentMonthStart.getMonth() - 1,
-    1
-  );
+  const windows = buildMonthWindows(now);
 
-  const currentMonthHistory = priceHistory.filter((entry) =>
-    isInRange(entry.capturedAt, currentMonthStart, nextMonthStart)
-  );
-  const previousMonthHistory = priceHistory.filter((entry) =>
-    isInRange(entry.capturedAt, previousMonthStart, currentMonthStart)
-  );
+  const allNames = new Set<string>();
+  const currentNames = new Set<string>();
+  const previousNames = new Set<string>();
+  let savingsTotal = 0;
+  let savingsCurrent = 0;
+  let savingsPrevious = 0;
 
-  const trackedItemsCurrent = new Set(currentMonthHistory.map((entry) => entry.productName)).size;
-  const trackedItemsPrevious = new Set(previousMonthHistory.map((entry) => entry.productName)).size;
+  for (const entry of priceHistory) {
+    const saving = Math.max(0, Number(entry.oldPrice) - Number(entry.newPrice));
+    const window = classify(entry.capturedAt, windows);
+    allNames.add(entry.productName);
+    savingsTotal = savingsTotal + saving;
+    if (window === CURRENT) {
+      currentNames.add(entry.productName);
+      savingsCurrent = savingsCurrent + saving;
+    } else if (window === PREVIOUS) {
+      previousNames.add(entry.productName);
+      savingsPrevious = savingsPrevious + saving;
+    }
+  }
 
-  const activeAlertsTotal = alerts.filter((alert) => alert.isActive).length;
-  const activeAlertsCurrent = alerts.filter(
-    (alert) => alert.isActive && isInRange(alert.createdAt, currentMonthStart, nextMonthStart)
-  ).length;
-  const activeAlertsPrevious = alerts.filter(
-    (alert) => alert.isActive && isInRange(alert.createdAt, previousMonthStart, currentMonthStart)
-  ).length;
+  let activeAlertsTotal = 0;
+  let activeAlertsCurrent = 0;
+  let activeAlertsPrevious = 0;
 
-  const favoritesCurrent = favorites.filter((favorite) =>
-    isInRange(favorite.createdAt, currentMonthStart, nextMonthStart)
-  ).length;
-  const favoritesPrevious = favorites.filter((favorite) =>
-    isInRange(favorite.createdAt, previousMonthStart, currentMonthStart)
-  ).length;
+  for (const alert of alerts) {
+    if (!alert.isActive) {
+      continue;
+    }
+    activeAlertsTotal += 1;
+    const window = classify(alert.createdAt, windows);
+    if (window === CURRENT) {
+      activeAlertsCurrent += 1;
+    } else if (window === PREVIOUS) {
+      activeAlertsPrevious += 1;
+    }
+  }
 
-  const savingsTotal = priceHistory.reduce(
-    (accumulator, entry) =>
-      accumulator + Math.max(0, Number(entry.oldPrice) - Number(entry.newPrice)),
-    0
-  );
-  const savingsCurrent = currentMonthHistory.reduce(
-    (accumulator, entry) =>
-      accumulator + Math.max(0, Number(entry.oldPrice) - Number(entry.newPrice)),
-    0
-  );
-  const savingsPrevious = previousMonthHistory.reduce(
-    (accumulator, entry) =>
-      accumulator + Math.max(0, Number(entry.oldPrice) - Number(entry.newPrice)),
-    0
-  );
+  let favoritesCurrent = 0;
+  let favoritesPrevious = 0;
 
-  const trackedItemsTotal = new Set(priceHistory.map((entry) => entry.productName)).size;
+  for (const favorite of favorites) {
+    const window = classify(favorite.createdAt, windows);
+    if (window === CURRENT) {
+      favoritesCurrent += 1;
+    } else if (window === PREVIOUS) {
+      favoritesPrevious += 1;
+    }
+  }
 
   return {
-    trackedItemsTotal,
-    trackedItemsCurrent,
-    trackedItemsPrevious,
+    trackedItemsTotal: allNames.size,
+    trackedItemsCurrent: currentNames.size,
+    trackedItemsPrevious: previousNames.size,
     activeAlertsTotal,
     activeAlertsCurrent,
     activeAlertsPrevious,
