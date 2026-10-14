@@ -67,7 +67,11 @@ export async function seedProducts(
 
 export type OrderGroups = string[][];
 
-function groupByTime<T>(items: T[], key: (item: T) => string, time: (item: T) => number): OrderGroups {
+function groupByTime<T>(
+  items: T[],
+  key: (item: T) => string,
+  time: (item: T) => number
+): OrderGroups {
   const sorted = [...items].sort((left, right) => time(left) - time(right));
   const groups: OrderGroups = [];
   let lastTime: number | null = null;

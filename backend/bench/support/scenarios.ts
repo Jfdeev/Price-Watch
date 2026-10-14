@@ -42,7 +42,10 @@ function seedHistory(random: Random, price: number, createdAt: number) {
   }));
 }
 
-export function generateSearchScenario(seed: number, options: SearchScenarioOptions): SearchScenario {
+export function generateSearchScenario(
+  seed: number,
+  options: SearchScenarioOptions
+): SearchScenario {
   const random = createRandom(seed);
   const products: SeedProduct[] = [];
   let clock = BASE_TIME;

@@ -171,12 +171,7 @@ function isAsciiWhitespace(char: string): boolean {
 }
 
 function isDiscountNumberChar(char: string): boolean {
-  return (
-    (char >= "0" && char <= "9") ||
-    char === "." ||
-    char === "," ||
-    char === "-"
-  );
+  return (char >= "0" && char <= "9") || char === "." || char === "," || char === "-";
 }
 
 function parseDiscountPercent(text?: string): number | undefined {
@@ -951,7 +946,9 @@ export async function updateProduct(
   return mapSavedProduct(updated);
 }
 
-export async function listProductPriceHistory(id: string): Promise<ProductPriceHistoryDTO[] | null> {
+export async function listProductPriceHistory(
+  id: string
+): Promise<ProductPriceHistoryDTO[] | null> {
   const product = await prisma.product.findFirst({
     where: {
       OR: [{ id }, { externalId: id }],
@@ -1007,7 +1004,9 @@ export async function listProductComparableOffers(
     const serpResult = await searchSerpApi(product.name, 1, Math.max(limit * 2, 8));
     const uniqueKeys = new Set<string>();
     const offers: ComparableOfferDTO[] = [fallbackOffer];
-    uniqueKeys.add(`${fallbackOffer.storeName ?? ""}-${normalizeProductUrl(fallbackOffer.productUrl)}`);
+    uniqueKeys.add(
+      `${fallbackOffer.storeName ?? ""}-${normalizeProductUrl(fallbackOffer.productUrl)}`
+    );
 
     for (const item of serpResult.products) {
       const key = `${item.storeName ?? ""}-${normalizeProductUrl(item.productUrl)}`;

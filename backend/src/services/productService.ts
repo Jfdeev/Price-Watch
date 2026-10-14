@@ -1,6 +1,6 @@
 import { prisma } from "../prisma/client";
 import { randomUUID } from "node:crypto";
-import { normalizeProductUrl } from "./productUrl";
+import { normalizeProductUrl, toNormalizedProductUrlColumn } from "./productUrl";
 
 type SerpApiShoppingResult = {
   title: string;
@@ -417,6 +417,23 @@ type ProductSearchResult = {
   message?: string;
 };
 
+async function findDeletedProductUrls(normalizedUrls: string[]): Promise<Set<string>> {
+  const candidates = Array.from(new Set(normalizedUrls.filter((value) => value.length > 0)));
+  if (candidates.length === 0) {
+    return new Set();
+  }
+
+  const deletedProducts = await prisma.product.findMany({
+    where: {
+      isDeleted: true,
+      normalizedProductUrl: { in: candidates }
+    },
+    select: { normalizedProductUrl: true }
+  });
+
+  return new Set(deletedProducts.map((product) => product.normalizedProductUrl as string));
+}
+
 export async function searchProducts(
   query: string,
   page = 1,
@@ -479,21 +496,8 @@ export async function searchProducts(
     }
   });
 
-  const deletedProducts = await prisma.product.findMany({
-    where: {
-      isDeleted: true
-    },
-    select: {
-      productUrl: true,
-      name: true,
-      storeName: true
-    }
-  });
-
-  const deletedUrls = new Set(
-    deletedProducts
-      .map((product) => normalizeProductUrl(product.productUrl))
-      .filter((value) => value.length > 0)
+  const deletedUrls = await findDeletedProductUrls(
+    searchResult.products.map((product) => normalizeProductUrl(product.productUrl))
   );
 
   const savedByExternalId = new Map(savedProducts.map((product) => [product.externalId, product]));
@@ -727,6 +731,10 @@ export async function upsertProduct(product: ProductDTO): Promise<string> {
       price: product.price,
       imageUrl: product.imageUrl,
       productUrl: product.productUrl,
+      normalizedProductUrl:
+        product.productUrl === undefined
+          ? undefined
+          : toNormalizedProductUrlColumn(product.productUrl),
       storeName: product.storeName,
       category: product.category,
       isManual: false
@@ -737,6 +745,7 @@ export async function upsertProduct(product: ProductDTO): Promise<string> {
       price: product.price,
       imageUrl: product.imageUrl,
       productUrl: product.productUrl,
+      normalizedProductUrl: toNormalizedProductUrlColumn(product.productUrl),
       storeName: product.storeName,
       category: product.category,
       isManual: false
@@ -848,6 +857,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
       price: input.price,
       imageUrl: input.imageUrl?.trim() || null,
       productUrl: normalizedProductUrl,
+      normalizedProductUrl: toNormalizedProductUrlColumn(normalizedProductUrl),
       storeName: normalizedStoreName,
       category: normalizedCategory,
       isManual: true
@@ -929,6 +939,10 @@ export async function updateProduct(
       price: nextPrice,
       imageUrl: input.imageUrl === undefined ? product.imageUrl : input.imageUrl,
       productUrl: input.productUrl === undefined ? product.productUrl : input.productUrl,
+      normalizedProductUrl:
+        input.productUrl === undefined
+          ? undefined
+          : toNormalizedProductUrlColumn(input.productUrl),
       storeName: nextStoreName,
       category: nextCategory,
       isManual: true

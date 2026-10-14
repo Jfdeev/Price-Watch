@@ -45,13 +45,24 @@ const CASES: Case[] = [
   { name: "L > limit com total da SerpApi", options: { matchingLocals: 30, totalResults: 1234 } },
   { name: "L > limit com próxima página", options: { matchingLocals: 30, nextLink: true } },
   { name: "externos duplicados", options: { duplicateRate: 0.8, serpItems: 12 } },
-  { name: "muitos excluídos e acertos de URL", options: { deletedProducts: 200, deletedHitRate: 0.7 } },
+  {
+    name: "muitos excluídos e acertos de URL",
+    options: { deletedProducts: 200, deletedHitRate: 0.7 }
+  },
   { name: "total da SerpApi zero", options: { totalResults: 0 } },
-  { name: "um externo novo que casa com a busca", options: { newMatchingItems: 1, overlapRate: 0 } },
+  {
+    name: "um externo novo que casa com a busca",
+    options: { newMatchingItems: 1, overlapRate: 0 }
+  },
   { name: "limit 24 com L grande", options: { matchingLocals: 60, serpItems: 24 }, limit: 24 },
   { name: "página 2", options: { matchingLocals: 12 }, page: 2 },
   { name: "busca com categoria", options: { matchingLocals: 20 }, category: "Notebook gamer" },
-  { name: "apenas categoria", options: { matchingLocals: 20 }, query: "", category: "notebook GAMER" },
+  {
+    name: "apenas categoria",
+    options: { matchingLocals: 20 },
+    query: "",
+    category: "notebook GAMER"
+  },
   { name: "apenas categoria sem resultados", options: {}, query: "", category: "Inexistente" }
 ];
 
@@ -80,11 +91,14 @@ describe("searchProducts equivale à versão original (F1 sem duplicados diverge
         expect(seededCreationOrder(after.snapshot, seeded)).toEqual(
           seededCreationOrder(before.snapshot, seeded)
         );
+        expect(after.snapshot.normalizedUrlMismatches).toEqual([]);
       }
     });
   }
 
   it("mantém a mensagem quando não há termo nem categoria", async () => {
-    await expect(searchProducts("  ", 1, 8)).resolves.toEqual(await legacySearchProducts("  ", 1, 8));
+    await expect(searchProducts("  ", 1, 8)).resolves.toEqual(
+      await legacySearchProducts("  ", 1, 8)
+    );
   });
 });

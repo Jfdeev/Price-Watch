@@ -1,0 +1,103 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const savedProduct = {
+  id: "db-1",
+  externalId: "ext-1",
+  name: "Notebook",
+  price: 1000,
+  imageUrl: null,
+  productUrl: null,
+  storeName: null,
+  category: null
+};
+
+vi.mock("../../src/prisma/client", () => ({
+  prisma: {
+    product: {
+      findUnique: vi.fn(async () => null),
+      findFirst: vi.fn(async () => null),
+      upsert: vi.fn(async () => savedProduct),
+      create: vi.fn(async () => savedProduct),
+      update: vi.fn(async () => savedProduct)
+    },
+    priceHistory: { create: vi.fn() },
+    store: {
+      findFirst: vi.fn(async () => ({ id: "s1" })),
+      findMany: vi.fn(async () => [{ name: "Loja A" }])
+    },
+    category: { findFirst: vi.fn(async () => ({ id: "c1" })) },
+    $queryRaw: vi.fn(async () => [{ found: 1 }])
+  }
+}));
+
+import { prisma } from "../../src/prisma/client";
+import { createProduct, updateProduct, upsertProduct } from "../../src/services/productService";
+
+type DataArgument = { data: Record<string, unknown> };
+type UpsertArgument = { create: Record<string, unknown>; update: Record<string, unknown> };
+
+function lastUpsert(): UpsertArgument {
+  return vi.mocked(prisma.product.upsert).mock.calls.at(-1)?.[0] as unknown as UpsertArgument;
+}
+
+function lastData(method: "create" | "update"): Record<string, unknown> {
+  const calls = vi.mocked(prisma.product[method]).mock.calls;
+  return (calls.at(-1)?.[0] as unknown as DataArgument).data;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("normalizedProductUrl em todo ponto de escrita (F2)", () => {
+  it("upsertProduct grava a URL normalizada no create e no update", async () => {
+    await upsertProduct({
+      id: "ext-1",
+      externalId: "ext-1",
+      name: "Notebook",
+      price: 10,
+      productUrl: "https://Loja.com/Item?A=1#x"
+    });
+
+    expect(lastUpsert().create.normalizedProductUrl).toBe("https://loja.com/item?a=1");
+    expect(lastUpsert().update.normalizedProductUrl).toBe("https://loja.com/item?a=1");
+  });
+
+  it("upsertProduct sem URL grava null no create e preserva no update", async () => {
+    await upsertProduct({ id: "ext-1", externalId: "ext-1", name: "Notebook", price: 10 });
+
+    expect(lastUpsert().create.normalizedProductUrl).toBeNull();
+    expect(lastUpsert().update.normalizedProductUrl).toBeUndefined();
+  });
+
+  it("createProduct grava a URL normalizada da URL aparada", async () => {
+    await createProduct({
+      name: "Produto",
+      price: 10,
+      storeName: "Loja A",
+      productUrl: "  HTTPS://LOJA.COM/P  ",
+      ownerUserId: "u1"
+    });
+
+    expect(lastData("create").normalizedProductUrl).toBe("https://loja.com/p");
+  });
+
+  it("createProduct sem URL grava null", async () => {
+    await createProduct({ name: "Produto", price: 10, storeName: "Loja A", ownerUserId: "u1" });
+
+    expect(lastData("create").normalizedProductUrl).toBeNull();
+  });
+
+  it.each([
+    [undefined, undefined],
+    [null, null],
+    ["", null],
+    ["https://Loja.com/Novo", "https://loja.com/novo"]
+  ])("updateProduct com productUrl %j grava %j", async (productUrl, expected) => {
+    vi.mocked(prisma.product.findFirst).mockResolvedValueOnce(savedProduct as never);
+
+    await updateProduct("db-1", { productUrl }, "u1");
+
+    expect(lastData("update").normalizedProductUrl).toBe(expected);
+  });
+});

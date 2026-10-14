@@ -1,6 +1,10 @@
 import { afterAll, beforeAll } from "vitest";
 import { prisma } from "../../src/prisma/client";
-import { startFakeSerpApi, useFakeSerpApi, type FakeSerpApi } from "../../bench/support/fakeSerpApi";
+import {
+  startFakeSerpApi,
+  useFakeSerpApi,
+  type FakeSerpApi
+} from "../../bench/support/fakeSerpApi";
 import {
   externalIdsById,
   resetDatabase,

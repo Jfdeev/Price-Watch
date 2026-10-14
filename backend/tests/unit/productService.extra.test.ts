@@ -250,16 +250,14 @@ describe("productService extra coverage", () => {
     vi.mocked(prisma.product.findUnique).mockResolvedValue(null as never);
     vi.mocked(prisma.product.findMany)
       .mockResolvedValueOnce([] as never)
-      .mockResolvedValueOnce([
-        {
-          productUrl: "https://loja-a.com/item",
-          name: "Notebook A",
-          storeName: "Loja A"
-        }
-      ] as never);
+      .mockResolvedValueOnce([{ normalizedProductUrl: "https://loja-a.com/item" }] as never);
 
     const result = await searchProducts("notebook", 1, 4);
 
+    expect(prisma.product.findMany).toHaveBeenCalledWith({
+      where: { isDeleted: true, normalizedProductUrl: { in: ["https://loja-a.com/item"] } },
+      select: { normalizedProductUrl: true }
+    });
     expect(result.products).toHaveLength(0);
     expect(result.totalResults).toBe(1);
     expect(result.totalPages).toBe(1);
