@@ -157,3 +157,78 @@ export function generateSearchScenario(
     }
   };
 }
+
+export type UpsertProductInput = {
+  id: string;
+  externalId: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  priceChange?: number;
+  imageUrl?: string;
+  productUrl?: string;
+  storeName?: string;
+  category?: string;
+};
+
+export type UpsertScenario = {
+  products: SeedProduct[];
+  input: UpsertProductInput[];
+};
+
+export type UpsertScenarioOptions = {
+  existing: number;
+  incoming: number;
+  existingRate: number;
+  duplicateRate: number;
+  samePriceRate: number;
+};
+
+export function generateUpsertScenario(
+  seed: number,
+  options: UpsertScenarioOptions
+): UpsertScenario {
+  const random = createRandom(seed);
+  const products: SeedProduct[] = Array.from({ length: options.existing }, (_, index) => {
+    const roll = random();
+    const externalId = `existing-${index}`;
+    return {
+      externalId,
+      name: `Produto existente ${index}`,
+      price: randomPrice(random),
+      imageUrl: random() < 0.5 ? `https://img.test/${externalId}.jpg` : null,
+      productUrl: random() < 0.7 ? `https://loja.test/${externalId}` : null,
+      storeName: pick(random, ["Loja A", null]),
+      category: pick(random, ["Informatica", null]),
+      isManual: roll < 0.15,
+      isDeleted: roll >= 0.15 && roll < 0.3,
+      createdAt: new Date(BASE_TIME - (index + 1) * 1_000)
+    };
+  });
+
+  const input: UpsertProductInput[] = [];
+  const lastPrice = new Map(products.map((product) => [product.externalId, product.price]));
+  for (let index = 0; index < options.incoming; index += 1) {
+    let externalId = `incoming-${index}`;
+    if (input.length > 0 && random() < options.duplicateRate) {
+      externalId = pick(random, input).externalId;
+    } else if (products.length > 0 && random() < options.existingRate) {
+      externalId = pick(random, products).externalId;
+    }
+    const previous = lastPrice.get(externalId);
+    const price =
+      previous !== undefined && random() < options.samePriceRate ? previous : randomPrice(random);
+    lastPrice.set(externalId, price);
+    input.push({
+      id: externalId,
+      externalId,
+      name: `Produto ${externalId} v${index}`,
+      price,
+      imageUrl: random() < 0.6 ? `https://img.test/${externalId}-${index}.png` : undefined,
+      productUrl: random() < 0.7 ? `https://Loja.test/${externalId}/${index}#frag` : undefined,
+      storeName: pick(random, ["Loja A", "Loja C", "SerpApi"]),
+      category: random() < 0.2 ? "Eletronicos" : undefined
+    });
+  }
+  return { products, input };
+}

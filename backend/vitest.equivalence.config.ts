@@ -10,7 +10,8 @@ export default defineConfig({
     include: ["tests/equivalence/**/*.test.ts"],
     fileParallelism: false,
     env: {
-      DATABASE_URL: process.env.EQUIVALENCE_DATABASE_URL ?? databaseUrlFor("pricewatch_test")
+      DATABASE_URL: process.env.EQUIVALENCE_DATABASE_URL ?? databaseUrlFor("pricewatch_test"),
+      PRISMA_QUERY_EVENTS: "1"
     }
   }
 });
