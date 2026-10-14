@@ -172,12 +172,7 @@ function isAsciiWhitespace(char: string): boolean {
 }
 
 function isDiscountNumberChar(char: string): boolean {
-  return (
-    (char >= "0" && char <= "9") ||
-    char === "." ||
-    char === "," ||
-    char === "-"
-  );
+  return (char >= "0" && char <= "9") || char === "." || char === "," || char === "-";
 }
 
 function parseDiscountPercent(text?: string): number | undefined {
@@ -464,7 +459,7 @@ export async function searchProducts(
         totalResults: undefined
       };
 
-  await Promise.allSettled(searchResult.products.map((product) => upsertProduct(product)));
+  await upsertProductsBatch(searchResult.products);
 
   const savedProducts = await prisma.product.findMany({
     where: {
@@ -759,6 +754,16 @@ export async function upsertProduct(product: ProductDTO): Promise<string> {
   return savedProduct.id;
 }
 
+export async function upsertProductsBatch(products: ProductDTO[]): Promise<void> {
+  for (const product of products) {
+    try {
+      await upsertProduct(product);
+    } catch {
+      continue;
+    }
+  }
+}
+
 export type CreateProductInput = {
   name: string;
   price: number;
@@ -940,9 +945,7 @@ export async function updateProduct(
       imageUrl: input.imageUrl === undefined ? product.imageUrl : input.imageUrl,
       productUrl: input.productUrl === undefined ? product.productUrl : input.productUrl,
       normalizedProductUrl:
-        input.productUrl === undefined
-          ? undefined
-          : toNormalizedProductUrlColumn(input.productUrl),
+        input.productUrl === undefined ? undefined : toNormalizedProductUrlColumn(input.productUrl),
       storeName: nextStoreName,
       category: nextCategory,
       isManual: true
@@ -954,7 +957,9 @@ export async function updateProduct(
   return mapSavedProduct(updated);
 }
 
-export async function listProductPriceHistory(id: string): Promise<ProductPriceHistoryDTO[] | null> {
+export async function listProductPriceHistory(
+  id: string
+): Promise<ProductPriceHistoryDTO[] | null> {
   const product = await prisma.product.findFirst({
     where: {
       OR: [{ id }, { externalId: id }],
@@ -1010,7 +1015,9 @@ export async function listProductComparableOffers(
     const serpResult = await searchSerpApi(product.name, 1, Math.max(limit * 2, 8));
     const uniqueKeys = new Set<string>();
     const offers: ComparableOfferDTO[] = [fallbackOffer];
-    uniqueKeys.add(`${fallbackOffer.storeName ?? ""}-${normalizeProductUrl(fallbackOffer.productUrl)}`);
+    uniqueKeys.add(
+      `${fallbackOffer.storeName ?? ""}-${normalizeProductUrl(fallbackOffer.productUrl)}`
+    );
 
     for (const item of serpResult.products) {
       const key = `${item.storeName ?? ""}-${normalizeProductUrl(item.productUrl)}`;
