@@ -137,4 +137,72 @@ describe("favorite routes", () => {
 
     expect(response.status).toBe(204);
   });
+
+  it("GET /favorites/product/:productId exige autenticacao", async () => {
+    const response = await request(app).get("/favorites/product/prod-1");
+
+    expect(response.status).toBe(401);
+  });
+
+  it("GET /favorites/product/:productId retorna o favorito do produto", async () => {
+    Object.defineProperty(prisma, "favorite", {
+      value: {
+        findUnique: async (args: {
+          where: { userId_productId: { userId: string; productId: string } };
+        }) =>
+          args.where.userId_productId.userId === "user-1" &&
+          args.where.userId_productId.productId === "prod-1"
+            ? { id: "fav-1", productId: "prod-1" }
+            : null,
+      },
+      configurable: true,
+    });
+
+    const token = buildToken("user-1");
+    const found = await request(app)
+      .get("/favorites/product/prod-1")
+      .set("Authorization", `Bearer ${token}`);
+    const missing = await request(app)
+      .get("/favorites/product/prod-2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(found.status).toBe(200);
+    expect(found.body).toEqual({ id: "fav-1", productId: "prod-1" });
+    expect(missing.status).toBe(200);
+    expect(missing.body).toBeNull();
+  });
+
+  it("POST /favorites/lookup exige autenticacao", async () => {
+    const response = await request(app).post("/favorites/lookup").send({ productIds: [] });
+
+    expect(response.status).toBe(401);
+  });
+
+  it("POST /favorites/lookup retorna apenas os favoritos dos produtos pedidos", async () => {
+    Object.defineProperty(prisma, "favorite", {
+      value: {
+        findMany: async () => [{ id: "fav-1", productId: "prod-1" }],
+      },
+      configurable: true,
+    });
+
+    const token = buildToken("user-1");
+    const response = await request(app)
+      .post("/favorites/lookup")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ productIds: ["prod-1", "prod-2"] });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([{ id: "fav-1", productId: "prod-1" }]);
+  });
+
+  it("POST /favorites/lookup rejeita lista invalida", async () => {
+    const token = buildToken("user-1");
+    const response = await request(app)
+      .post("/favorites/lookup")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ productIds: "prod-1" });
+
+    expect(response.status).toBe(400);
+  });
 });

@@ -4,12 +4,16 @@ vi.mock("../../src/services/favoriteService", () => ({
   createFavorite: vi.fn(),
   listFavorites: vi.fn(),
   deleteFavorite: vi.fn(),
+  findFavoriteForProduct: vi.fn(),
+  findFavoritesForProducts: vi.fn(),
 }));
 
 import {
   createFavoriteController,
   listFavoritesController,
   deleteFavoriteController,
+  getFavoriteForProductController,
+  lookupFavoritesController,
 } from "../../src/controllers/favoriteController";
 import * as svc from "../../src/services/favoriteService";
 
@@ -83,6 +87,66 @@ describe("deleteFavoriteController", () => {
   it("returns 401 without user", async () => {
     const { req, res } = mockReqRes();
     await deleteFavoriteController(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+});
+
+describe("getFavoriteForProductController", () => {
+  it("returns the favorite of the product for the user", async () => {
+    vi.mocked(svc.findFavoriteForProduct).mockResolvedValue({ id: "f1", productId: "p1" });
+    const { req, res } = mockReqRes({}, { productId: "p1" }, { id: "u1" });
+    await getFavoriteForProductController(req, res);
+    expect(svc.findFavoriteForProduct).toHaveBeenCalledWith("u1", "p1");
+    expect(res.json).toHaveBeenCalledWith({ id: "f1", productId: "p1" });
+  });
+
+  it("returns null when the product is not a favorite", async () => {
+    vi.mocked(svc.findFavoriteForProduct).mockResolvedValue(null);
+    const { req, res } = mockReqRes({}, { productId: "p1" }, { id: "u1" });
+    await getFavoriteForProductController(req, res);
+    expect(res.json).toHaveBeenCalledWith(null);
+  });
+
+  it("returns 401 without user", async () => {
+    const { req, res } = mockReqRes({}, { productId: "p1" });
+    await getFavoriteForProductController(req, res);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(svc.findFavoriteForProduct).not.toHaveBeenCalled();
+  });
+});
+
+describe("lookupFavoritesController", () => {
+  it("returns the favorites of the requested products", async () => {
+    vi.mocked(svc.findFavoritesForProducts).mockResolvedValue([{ id: "f1", productId: "p1" }]);
+    const { req, res } = mockReqRes({ productIds: ["p1", "p2"] }, {}, { id: "u1" });
+    await lookupFavoritesController(req, res);
+    expect(svc.findFavoritesForProducts).toHaveBeenCalledWith("u1", ["p1", "p2"]);
+    expect(res.json).toHaveBeenCalledWith([{ id: "f1", productId: "p1" }]);
+  });
+
+  it("accepts an empty list", async () => {
+    vi.mocked(svc.findFavoritesForProducts).mockResolvedValue([]);
+    const { req, res } = mockReqRes({ productIds: [] }, {}, { id: "u1" });
+    await lookupFavoritesController(req, res);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  it.each([
+    [undefined],
+    ["p1"],
+    [[1, 2]],
+    [[""]],
+    [Array.from({ length: 101 }, (_, index) => `p${index}`)],
+  ])("returns 400 for invalid productIds %j", async (productIds) => {
+    const { req, res } = mockReqRes({ productIds }, {}, { id: "u1" });
+    await lookupFavoritesController(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(svc.findFavoritesForProducts).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 without user", async () => {
+    const { req, res } = mockReqRes({ productIds: ["p1"] });
+    await lookupFavoritesController(req, res);
     expect(res.status).toHaveBeenCalledWith(401);
   });
 });

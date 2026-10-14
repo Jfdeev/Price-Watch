@@ -80,6 +80,29 @@ export async function listFavorites(userId: string) {
   });
 }
 
+export async function findFavoriteForProduct(userId: string, productId: string) {
+  return prisma.favorite.findUnique({
+    where: {
+      userId_productId: { userId, productId },
+    },
+    select: { id: true, productId: true },
+  });
+}
+
+export async function findFavoritesForProducts(userId: string, productIds: string[]) {
+  if (productIds.length === 0) {
+    return [];
+  }
+
+  return prisma.favorite.findMany({
+    where: {
+      userId,
+      productId: { in: productIds },
+    },
+    select: { id: true, productId: true },
+  });
+}
+
 export async function deleteFavorite(id: string, userId: string) {
   const favorite = await prisma.favorite.findFirst({
     where: { id, userId },

@@ -13,6 +13,8 @@ import {
   createFavorite,
   listFavorites,
   deleteFavorite,
+  findFavoriteForProduct,
+  findFavoritesForProducts,
 } from "../../src/services/favoriteService";
 
 const originalFavorite = prisma.favorite;
@@ -191,5 +193,49 @@ describe("favoriteService", () => {
       expect(result).toEqual(existingFav);
       expect(prisma.favorite.delete).toHaveBeenCalledWith({ where: { id: "f1" } });
     });
+  });
+});
+
+describe("findFavoriteForProduct", () => {
+  it("uses the unique index on userId and productId", async () => {
+    const findUnique = vi.fn().mockResolvedValueOnce({ id: "f1", productId: "p1" });
+    mockFavoriteModel({ findUnique });
+
+    const result = await findFavoriteForProduct("u1", "p1");
+
+    expect(result).toEqual({ id: "f1", productId: "p1" });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { userId_productId: { userId: "u1", productId: "p1" } },
+      select: { id: true, productId: true },
+    });
+  });
+
+  it("returns null when there is no favorite", async () => {
+    mockFavoriteModel({ findUnique: vi.fn().mockResolvedValueOnce(null) });
+
+    await expect(findFavoriteForProduct("u1", "p1")).resolves.toBeNull();
+  });
+});
+
+describe("findFavoritesForProducts", () => {
+  it("queries only the requested products of the user", async () => {
+    const findMany = vi.fn().mockResolvedValueOnce([{ id: "f1", productId: "p1" }]);
+    mockFavoriteModel({ findMany });
+
+    const result = await findFavoritesForProducts("u1", ["p1", "p2"]);
+
+    expect(result).toEqual([{ id: "f1", productId: "p1" }]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { userId: "u1", productId: { in: ["p1", "p2"] } },
+      select: { id: true, productId: true },
+    });
+  });
+
+  it("skips the database for an empty list", async () => {
+    const findMany = vi.fn();
+    mockFavoriteModel({ findMany });
+
+    await expect(findFavoritesForProducts("u1", [])).resolves.toEqual([]);
+    expect(findMany).not.toHaveBeenCalled();
   });
 });
