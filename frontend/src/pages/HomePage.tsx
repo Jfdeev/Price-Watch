@@ -7,7 +7,7 @@ import { Input } from "../components/ui/input";
 import {
   getShowcaseProducts,
   listCategories,
-  listFavorites,
+  lookupFavorites,
   mapProductToCard,
   searchProducts,
   type CategoryRecord,
@@ -89,6 +89,12 @@ export function HomePage() {
       .catch(() => setCategories([]));
   }, []);
 
+  async function fetchFavoritesByProduct(resultProducts: Product[]) {
+    const pageProductIds = resultProducts.slice(0, SEARCH_PAGE_SIZE).map((product) => product.id);
+    const favorites = await lookupFavorites(pageProductIds);
+    return new Map(favorites.map((item) => [item.productId, item.id]));
+  }
+
   function normalizeProducts(resultProducts: Product[], favoritesByProduct: Map<string, string>) {
     return resultProducts.slice(0, SEARCH_PAGE_SIZE).map((product) => ({
       ...mapProductToCard(product),
@@ -109,8 +115,7 @@ export function HomePage() {
       let favoritesByProduct = new Map<string, string>();
 
       try {
-        const favorites = await listFavorites();
-        favoritesByProduct = new Map(favorites.map((item) => [item.product.id, item.id]));
+        favoritesByProduct = await fetchFavoritesByProduct(result.products);
       } catch {
         favoritesByProduct = new Map();
       }
@@ -162,8 +167,7 @@ export function HomePage() {
         page: 1,
         limit: SEARCH_PAGE_SIZE
       });
-      const favorites = await listFavorites();
-      const favoritesByProduct = new Map(favorites.map((item) => [item.product.id, item.id]));
+      const favoritesByProduct = await fetchFavoritesByProduct(result.products);
 
       setProducts(normalizeProducts(result.products, favoritesByProduct));
       setSubmittedQuery("");

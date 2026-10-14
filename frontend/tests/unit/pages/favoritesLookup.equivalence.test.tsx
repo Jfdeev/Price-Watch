@@ -86,7 +86,12 @@ vi.mock("recharts", () => ({
   Tooltip: () => <div />
 }));
 
-import { deleteFavorite, getProduct, getShowcaseProducts, searchProducts } from "../../../src/services/api";
+import {
+  deleteFavorite,
+  getProduct,
+  getShowcaseProducts,
+  searchProducts
+} from "../../../src/services/api";
 
 const pageProducts = Array.from({ length: 10 }, (_, index) => ({
   id: `p${index}`,

@@ -30,10 +30,10 @@ import {
   deleteFavorite,
   deleteProduct,
   favoriteProduct,
+  getFavoriteForProduct,
   getProduct,
   listProductOffers,
   listProductPriceHistory,
-  listFavorites,
   updateProduct,
   type ComparableOffer,
   type Product
@@ -153,8 +153,7 @@ export function ProductDetailPage() {
         setProduct(mapApiProduct(apiProduct, history, offers));
         if (apiProduct) {
           try {
-            const favorites = await listFavorites();
-            const match = favorites.find((fav) => fav.product.id === apiProduct.id);
+            const match = await getFavoriteForProduct(apiProduct.id);
             setIsFavorite(Boolean(match));
             setFavoriteId(match?.id ?? null);
           } catch {

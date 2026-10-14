@@ -7,7 +7,7 @@ vi.mock("../../../src/services/api", () => ({
   searchProducts: vi.fn(),
   getShowcaseProducts: vi.fn(),
   listCategories: vi.fn().mockResolvedValue([]),
-  listFavorites: vi.fn().mockResolvedValue([]),
+  lookupFavorites: vi.fn().mockResolvedValue([]),
   mapProductToCard: vi.fn((p: Record<string, unknown>) => ({
     id: p.id,
     name: p.name,
@@ -23,7 +23,7 @@ vi.mock("../../../src/contexts/AuthContext", () => ({
   useAuth: () => ({ user: null, loading: false, logout: vi.fn(), loginWithToken: vi.fn() })
 }));
 
-import { getShowcaseProducts, listFavorites, searchProducts } from "../../../src/services/api";
+import { getShowcaseProducts, lookupFavorites, searchProducts } from "../../../src/services/api";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -96,6 +96,7 @@ describe("HomePage", () => {
     await waitFor(() => {
       expect(screen.getByText("Notebook")).toBeInTheDocument();
     });
+    expect(lookupFavorites).toHaveBeenCalledWith(["p1"]);
   });
 
   it("shows empty message when no results", async () => {
@@ -165,7 +166,7 @@ describe("HomePage", () => {
       source: "mock",
       message: "Sugestões carregadas para você explorar."
     });
-    vi.mocked(listFavorites).mockResolvedValue([]);
+    vi.mocked(lookupFavorites).mockResolvedValue([]);
 
     render(
       <MemoryRouter>

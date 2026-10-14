@@ -40,6 +40,11 @@ export type Favorite = {
   product: Product;
 };
 
+export type FavoriteLookup = {
+  id: string;
+  productId: string;
+};
+
 export type PriceAlert = {
   id: string;
   targetPrice: number;
@@ -343,6 +348,19 @@ export async function deleteFavorite(favoriteId: string) {
 
 export async function listFavorites(): Promise<Favorite[]> {
   return await request<Favorite[]>("/favorites");
+}
+
+export async function getFavoriteForProduct(productId: string): Promise<FavoriteLookup | null> {
+  return await request<FavoriteLookup | null>(
+    `/favorites/product/${encodeURIComponent(productId)}`
+  );
+}
+
+export async function lookupFavorites(productIds: string[]): Promise<FavoriteLookup[]> {
+  return await request<FavoriteLookup[]>("/favorites/lookup", {
+    method: "POST",
+    body: JSON.stringify({ productIds })
+  });
 }
 
 export async function createAlert(productId: string, targetPrice: number, email: string) {

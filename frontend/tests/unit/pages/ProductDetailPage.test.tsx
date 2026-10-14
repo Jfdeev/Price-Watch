@@ -12,7 +12,7 @@ vi.mock("../../../src/services/api", () => ({
   deleteFavorite: vi.fn(),
   deleteProduct: vi.fn(),
   updateProduct: vi.fn(),
-  listFavorites: vi.fn().mockResolvedValue([]),
+  getFavoriteForProduct: vi.fn().mockResolvedValue(null),
   createAlert: vi.fn(),
   setAuthToken: vi.fn(),
   getCurrentUser: vi.fn()
@@ -43,7 +43,7 @@ import {
   deleteFavorite,
   deleteProduct,
   listProductPriceHistory,
-  listFavorites,
+  getFavoriteForProduct,
   updateProduct
 } from "../../../src/services/api";
 
@@ -119,7 +119,7 @@ describe("ProductDetailPage", () => {
 
   it("removes an existing favorite", async () => {
     vi.mocked(getProduct).mockResolvedValue(mockProduct);
-    vi.mocked(listFavorites).mockResolvedValue([{ id: "fav-1", product: { id: "p1" } }] as never);
+    vi.mocked(getFavoriteForProduct).mockResolvedValue({ id: "fav-1", productId: "p1" });
     vi.mocked(deleteFavorite).mockResolvedValue(undefined as never);
     renderPage();
 
@@ -128,6 +128,7 @@ describe("ProductDetailPage", () => {
     fireEvent.click(screen.getByText(/Favoritado/i));
 
     await waitFor(() => expect(deleteFavorite).toHaveBeenCalledWith("fav-1"));
+    expect(getFavoriteForProduct).toHaveBeenCalledWith("p1");
   });
 
   it("creates a price alert for the current user", async () => {

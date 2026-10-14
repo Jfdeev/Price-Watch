@@ -18,6 +18,8 @@ import {
   favoriteProduct,
   deleteFavorite,
   listFavorites,
+  getFavoriteForProduct,
+  lookupFavorites,
   createAlert,
   updateAlert,
   deleteAlert,
@@ -424,6 +426,39 @@ describe("Favorites API", () => {
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/favorites/f1"),
       expect.objectContaining({ method: "DELETE" })
+    );
+  });
+
+  it("getFavoriteForProduct requests the favorite of one product", async () => {
+    mockFetch.mockReturnValueOnce(jsonResponse({ id: "f1", productId: "p 1" }));
+
+    const result = await getFavoriteForProduct("p 1");
+
+    expect(result).toEqual({ id: "f1", productId: "p 1" });
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/favorites/product/p%201"),
+      expect.anything()
+    );
+  });
+
+  it("getFavoriteForProduct returns null when the product is not a favorite", async () => {
+    mockFetch.mockReturnValueOnce(jsonResponse(null));
+
+    await expect(getFavoriteForProduct("p1")).resolves.toBeNull();
+  });
+
+  it("lookupFavorites posts the product ids of the page", async () => {
+    mockFetch.mockReturnValueOnce(jsonResponse([{ id: "f1", productId: "p1" }]));
+
+    const result = await lookupFavorites(["p1", "p2"]);
+
+    expect(result).toEqual([{ id: "f1", productId: "p1" }]);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/favorites/lookup"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ productIds: ["p1", "p2"] })
+      })
     );
   });
 
