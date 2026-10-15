@@ -1,0 +1,46 @@
+-- antes: findMany de todas as lojas ativas
+Seq Scan on "Store"  (cost=0.00..3029.00 rows=89927 width=20) (actual rows=90000 loops=1)
+  Filter: "isActive"
+  Rows Removed by Filter: 10000
+  Buffers: shared hit=2029
+Planning Time: 0.190 ms
+Execution Time: 25.496 ms
+
+-- antes: loja ativa do usuário por ILIKE
+Limit  (cost=0.00..882.25 rows=1 width=37) (actual rows=1 loops=1)
+  Buffers: shared hit=2029
+  ->  Seq Scan on "Store"  (cost=0.00..3529.00 rows=4 width=37) (actual rows=1 loops=1)
+        Filter: ("isActive" AND (name ~~* 'loja benchmark 99998'::text) AND ("userId" = 'u1'::text))
+        Rows Removed by Filter: 99998
+        Buffers: shared hit=2029
+Planning Time: 0.394 ms
+Execution Time: 130.712 ms
+
+-- depois: existe loja ativa
+Limit  (cost=0.00..0.03 rows=1 width=4) (actual rows=1 loops=1)
+  Buffers: shared hit=1
+  ->  Seq Scan on "Store"  (cost=0.00..3029.00 rows=89927 width=4) (actual rows=1 loops=1)
+        Filter: "isActive"
+        Rows Removed by Filter: 1
+        Buffers: shared hit=1
+Planning Time: 0.108 ms
+Execution Time: 0.036 ms
+
+-- depois: loja ativa pelo nome
+Limit  (cost=0.42..1.71 rows=1 width=4) (actual rows=1 loops=1)
+  Buffers: shared hit=4
+  ->  Index Scan using "Store_active_lower_name_idx" on "Store"  (cost=0.42..579.98 rows=450 width=4) (actual rows=1 loops=1)
+        Index Cond: (lower(name) = 'loja benchmark 99998'::text)
+        Buffers: shared hit=4
+Planning Time: 0.073 ms
+Execution Time: 0.084 ms
+
+-- depois: loja ativa do usuário pelo nome
+Limit  (cost=0.42..3.02 rows=1 width=4) (actual rows=1 loops=1)
+  Buffers: shared hit=4
+  ->  Index Scan using "Store_active_lower_name_idx" on "Store"  (cost=0.42..581.10 rows=223 width=4) (actual rows=1 loops=1)
+        Index Cond: (lower(name) = 'loja benchmark 99998'::text)
+        Filter: ("userId" = 'u1'::text)
+        Buffers: shared hit=4
+Planning Time: 0.243 ms
+Execution Time: 0.164 ms
