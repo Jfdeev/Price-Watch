@@ -21,6 +21,7 @@ const SCOPES = [
 ];
 const CONFIG_FILE = /^(backend|frontend)\/[^/]+\.config\.(ts|js|mjs|cjs)$/;
 const SCRIPT_FILE = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
+const LINE_BREAK = new RegExp("\r?\n");
 const DIRECTIVE = /^(eslint-disable(-next-line|-line)?|eslint-enable|@ts-(expect-error|ignore|nocheck|check))\b/;
 
 function listFiles() {
@@ -68,8 +69,7 @@ function pythonComments(file) {
 }
 
 function cssComments(file) {
-  const lines = readFileSync(path.join(root, file), "utf8").split(/?
-/);
+  const lines = readFileSync(path.join(root, file), "utf8").split(LINE_BREAK);
   return lines.flatMap((line, index) =>
     line.includes("/*") ? [`${file}:${index + 1}: ${line.trim().slice(0, 80)}`] : []
   );
