@@ -23,6 +23,7 @@ SURFACE = "#fcfcfb"
 FUNCTIONS = {
     "f1_upsert_lote.csv": ("F1", "searchProducts: upsert dos produtos da SerpApi", "n = produtos retornados pela SerpApi"),
     "f2_produtos_excluidos.csv": ("F2", "searchProducts: URLs de produtos excluídos", "D = produtos excluídos no banco (página com 24 itens)"),
+    "f2_busca_completa.csv": ("F2b", "searchProducts completo com D excluídos", "D = produtos excluídos no banco (página com 24 itens)"),
     "f3_create_product.csv": ("F3", "createProduct: validação da loja", "S = lojas no banco (90% ativas)"),
     "f4_favorito_produto.csv": ("F4", "ProductDetailPage: favorito do produto", "F = favoritos do usuário"),
     "f5_favoritos_pagina.csv": ("F5", "HomePage: favoritos da página", "F = favoritos do usuário (8 produtos na página)"),
