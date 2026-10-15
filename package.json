@@ -1,0 +1,8 @@
+{
+  "name": "price-watch",
+  "private": true,
+  "scripts": {
+    "bench": "node scripts/bench-all.mjs",
+    "check:comments": "node scripts/check-comments.mjs"
+  }
+}
