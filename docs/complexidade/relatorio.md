@@ -69,6 +69,17 @@ Convenções:
 - **N** é o total de linhas da tabela envolvida.
 - Uma consulta por índice B-tree custa O(log N) para localizar o primeiro registro, mais O(r) para os r registros retornados.
 
+**Como ler as medições.** Cada tabela traz três coisas:
+- a inclinação no log-log entre os dois maiores n;
+- um ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos;
+- o R² desse ajuste.
+
+Uma função linear com custo fixo relevante (idas ao banco, chamada à SerpApi) tem a forma t = a + b·n. A inclinação entre dois pontos fica **abaixo de 1** enquanto a ainda pesa frente a b·n, e só tende a 1 quando b·n domina. Por isso, nas funções de banco, a classe é lida pelo ajuste: R² perto de 1 com b > 0 indica crescimento linear; b ≈ 0 indica custo constante em n. A inclinação serve de apoio.
+
+**Cópias da versão original.** As versões originais usadas como referência ficam em `backend/bench/legacy/` e `frontend/bench/legacy/`. São cópias fiéis, com duas diferenças sem efeito na saída:
+- formatação aplicada pelo Prettier;
+- em `mapSerpApiItem`, o `if (válido) { comentário } else { ... }` virou `if (!válido) { ... }`, porque o código não pode ter comentários.
+
 ### F1 — upsert dos produtos da busca (`searchProducts` → `upsertProduct` em laço)
 
 **Responsável:** João Felipe da Rocha Soares
@@ -182,13 +193,18 @@ Testes que comprovam:
 
 | n | antes (ms) | depois (ms) | antes ÷ depois | consultas antes | consultas depois |
 |---|---|---|---|---|---|
-| 10 | 54,4 | 23,9 | 2,3× | 12 | 6 |
-| 100 | 117 | 28,9 | 4,0× | 110 | 6 |
-| 1.000 | 800 | 219 | 3,7× | 1.171 | 6 |
-| 10.000 | 11.153 | 831 | 13,4× | 11.581 | 6 |
-| 100.000 | — | 11.531 | — | — | 6 |
+| 10 | 34,7 | 21,4 | 1,6× | 12 | 6 |
+| 100 | 136 | 33,5 | 4,1× | 110 | 6 |
+| 1.000 | 686 | 140 | 4,9× | 1.171 | 6 |
+| 10.000 | 9.257 | 1.201 | 7,7× | 11.581 | 6 |
+| 100.000 | — | 6.388 | — | — | 6 |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,14; depois: 1,14.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,13; depois: 0,73.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = -52,09 ms, b = 929,1258 µs por unidade de n, R² = 0,999
+- depois: a = 165,05 ms, b = 62,6252 µs por unidade de n, R² = 0,993
 
 ![F1 tempo](graficos/f1_tempo.png)
 ![F1 consultas](graficos/f1_consultas.png)
@@ -199,7 +215,9 @@ Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,14; de
 - **Tempo:** as duas curvas são lineares a partir de n ≈ 1.000, como previsto. O trabalho por linha domina quando n cresce. A diferença está no coeficiente: ≈ c_rt por produto antes e ≈ c_row por produto depois.
 - **n pequeno:** a versão nova fica praticamente plana, dominada pelas 6 idas. Esse é o regime real do sistema (n ≤ 24).
 - **Limite da medição:** a versão original não foi medida com n = 100.000. A razão medida de 1,16 consulta por produto (11.581 consultas para n = 10.000) projeta cerca de 116 mil idas por repetição, mais o seed de 100 mil linhas a cada repetição.
-- Com n = 10.000 a versão nova é 13,4× mais rápida, com as duas curvas na mesma inclinação (1,14).
+- Com n = 10.000 a versão nova é 7,7× mais rápida.
+- O ajuste linear dá b ≈ 929 µs por produto antes (cerca de uma ida ao banco por produto) e b ≈ 63 µs depois (custo de ler e escrever uma linha), ambos com R² ≥ 0,99. As duas versões são lineares em tempo, com coeficiente cerca de 15× menor na nova.
+- A inclinação de 0,73 da versão nova entre 10⁴ e 10⁵ é ruído entre rodadas (outra rodada deu 1,14); o ajuste sobre todos os pontos é a leitura mais estável.
 
 ### F2 — URLs de produtos excluídos na busca (`searchProducts` → `deletedProducts`)
 
@@ -295,34 +313,44 @@ Testes:
 
 | n | antes (ms) | depois (ms) | antes ÷ depois | consultas antes | consultas depois |
 |---|---|---|---|---|---|
-| 10 | 3,78 | 6,21 | 0,6× | 1 | 1 |
-| 100 | 6,83 | 5,47 | 1,2× | 1 | 1 |
-| 1.000 | 11,1 | 3,40 | 3,3× | 1 | 1 |
-| 10.000 | 145 | 3,42 | 42,4× | 1 | 1 |
-| 100.000 | 1.158 | 5,18 | 223,7× | 1 | 1 |
+| 10 | 2,75 | 2,79 | 1,0× | 1 | 1 |
+| 100 | 4,62 | 2,89 | 1,6× | 1 | 1 |
+| 1.000 | 12,1 | 3,82 | 3,2× | 1 | 1 |
+| 10.000 | 63,1 | 3,01 | 21,0× | 1 | 1 |
+| 100.000 | 596 | 5,38 | 110,6× | 1 | 1 |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 0,90; depois: 0,18.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 0,97; depois: 0,25.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = 4,21 ms, b = 5,9134 µs por unidade de n, R² = 1,000
+- depois: a = 3,07 ms, b = 0,0229 µs por unidade de n, R² = 0,847
 
 ![F2 tempo](graficos/f2_tempo.png)
 
 **Formato observado versus previsto.**
-- "Antes" cresce com inclinação próxima de 1 no log-log a partir de D ≈ 1.000, pois o transporte e a normalização de D linhas dominam.
-- "Depois" é praticamente plano: o fator log N não é visível nessa faixa, porque a árvore B tem 3 ou 4 níveis.
+- "Antes" é linear em D: o ajuste a + b·D tem R² perto de 1 e b de alguns µs por linha excluída (transferir e normalizar cada linha). A inclinação entre os dois maiores D fica um pouco abaixo de 1 por causa do custo fixo a da ida ao banco (ver "Como ler as medições").
+- "Depois" tem b ≈ 0 no ajuste: o custo não depende de D. O fator log N do índice não aparece nessa faixa, porque a árvore B tem 3 ou 4 níveis. As variações de poucos milissegundos são ruído de medição.
 - Para D pequeno (10–100) as curvas coincidem, porque a ida ao banco (c_rt) domina.
 
 **Busca completa (F2b).** Também medimos o `searchProducts` inteiro com D crescente.
-- "Antes" chega a 879 ms com D = 100.000, dominado por trazer e normalizar as D linhas.
-- "Depois" fica entre 29 e 53 ms. A pequena variação que resta não vem da F2: o `count`/`findMany` com `ILIKE '%q%'` da F6 varre a tabela toda, inclusive as D linhas excluídas (seção F6). Esse custo por linha é muito menor que o de transferir e normalizar no Node.
+- "Antes" chega a 523 ms com D = 100.000, dominado por trazer e normalizar as D linhas.
+- "Depois" fica entre 28 e 57 ms (b ≈ 0,28 µs por linha contra 4,5 µs antes). A pequena variação que resta não vem da F2: o `count`/`findMany` com `ILIKE '%q%'` da F6 varre a tabela toda, inclusive as D linhas excluídas (seção F6). Esse custo por linha é muito menor que o de transferir e normalizar no Node.
 
 | n | antes (ms) | depois (ms) | antes ÷ depois | consultas antes | consultas depois |
 |---|---|---|---|---|---|
-| 10 | 85,6 | 30,4 | 2,8× | 33 | 12 |
-| 100 | 54,3 | 29,0 | 1,9× | 31 | 12 |
-| 1.000 | 63,1 | 38,4 | 1,6× | 32 | 12 |
-| 10.000 | 129 | 52,9 | 2,4× | 35 | 12 |
-| 100.000 | 879 | 49,7 | 17,7× | 55 | 13 |
+| 10 | 79,1 | 29,4 | 2,7× | 33 | 12 |
+| 100 | 69,8 | 29,9 | 2,3× | 31 | 12 |
+| 1.000 | 72,4 | 28,1 | 2,6× | 32 | 12 |
+| 10.000 | 95,3 | 37,2 | 2,6× | 35 | 12 |
+| 100.000 | 523 | 57,4 | 9,1× | 36 | 13 |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 0,83; depois: -0,03.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 0,74; depois: 0,19.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = 66,93 ms, b = 4,5455 µs por unidade de n, R² = 0,997
+- depois: a = 30,27 ms, b = 0,2753 µs por unidade de n, R² = 0,960
 
 ![F2b tempo](graficos/f2b_tempo.png)
 
@@ -433,8 +461,8 @@ Seq Scan on "Store"  (cost=0.00..3029.00 rows=89927 width=20) (actual rows=90000
   Filter: "isActive"
   Rows Removed by Filter: 10000
   Buffers: shared hit=2029
-Planning Time: 0.190 ms
-Execution Time: 25.496 ms
+Planning Time: 0.079 ms
+Execution Time: 13.418 ms
 
 -- antes: loja ativa do usuário por ILIKE
 Limit  (cost=0.00..882.25 rows=1 width=37) (actual rows=1 loops=1)
@@ -443,8 +471,8 @@ Limit  (cost=0.00..882.25 rows=1 width=37) (actual rows=1 loops=1)
         Filter: ("isActive" AND (name ~~* 'loja benchmark 99998'::text) AND ("userId" = 'u1'::text))
         Rows Removed by Filter: 99998
         Buffers: shared hit=2029
-Planning Time: 0.394 ms
-Execution Time: 130.712 ms
+Planning Time: 0.216 ms
+Execution Time: 53.598 ms
 
 -- depois: existe loja ativa
 Limit  (cost=0.00..0.03 rows=1 width=4) (actual rows=1 loops=1)
@@ -453,44 +481,53 @@ Limit  (cost=0.00..0.03 rows=1 width=4) (actual rows=1 loops=1)
         Filter: "isActive"
         Rows Removed by Filter: 1
         Buffers: shared hit=1
-Planning Time: 0.108 ms
-Execution Time: 0.036 ms
+Planning Time: 0.043 ms
+Execution Time: 0.012 ms
 
 -- depois: loja ativa pelo nome
-Limit  (cost=0.42..1.71 rows=1 width=4) (actual rows=1 loops=1)
+Limit  (cost=0.42..1.73 rows=1 width=4) (actual rows=1 loops=1)
   Buffers: shared hit=4
-  ->  Index Scan using "Store_active_lower_name_idx" on "Store"  (cost=0.42..579.98 rows=450 width=4) (actual rows=1 loops=1)
+  ->  Index Scan using "Store_active_lower_name_idx" on "Store"  (cost=0.42..592.45 rows=450 width=4) (actual rows=1 loops=1)
         Index Cond: (lower(name) = 'loja benchmark 99998'::text)
         Buffers: shared hit=4
-Planning Time: 0.073 ms
-Execution Time: 0.084 ms
+Planning Time: 0.046 ms
+Execution Time: 0.052 ms
 
 -- depois: loja ativa do usuário pelo nome
-Limit  (cost=0.42..3.02 rows=1 width=4) (actual rows=1 loops=1)
+Limit  (cost=0.42..3.07 rows=1 width=4) (actual rows=1 loops=1)
   Buffers: shared hit=4
-  ->  Index Scan using "Store_active_lower_name_idx" on "Store"  (cost=0.42..581.10 rows=223 width=4) (actual rows=1 loops=1)
+  ->  Index Scan using "Store_active_lower_name_idx" on "Store"  (cost=0.42..593.58 rows=224 width=4) (actual rows=1 loops=1)
         Index Cond: (lower(name) = 'loja benchmark 99998'::text)
         Filter: ("userId" = 'u1'::text)
         Buffers: shared hit=4
-Planning Time: 0.243 ms
-Execution Time: 0.164 ms
+Planning Time: 0.049 ms
+Execution Time: 0.038 ms
 ```
 
 **Medição.**
 
 | n | antes (ms) | depois (ms) | antes ÷ depois | consultas antes | consultas depois |
 |---|---|---|---|---|---|
-| 10 | 15,6 | 12,3 | 1,3× | 3 | 4 |
-| 100 | 16,7 | 20,4 | 0,8× | 3 | 4 |
-| 1.000 | 15,5 | 16,4 | 0,9× | 3 | 4 |
-| 10.000 | 105 | 14,9 | 7,1× | 3 | 4 |
-| 100.000 | 508 | 9,54 | 53,2× | 3 | 4 |
+| 10 | 10,6 | 13,6 | 0,8× | 3 | 4 |
+| 100 | 11,5 | 10,5 | 1,1× | 3 | 4 |
+| 1.000 | 15,3 | 10,1 | 1,5× | 3 | 4 |
+| 10.000 | 58,4 | 12,1 | 4,8× | 3 | 4 |
+| 100.000 | 294 | 10,5 | 27,9× | 3 | 4 |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 0,68; depois: -0,19.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 0,70; depois: -0,06.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = 15,81 ms, b = 2,7986 µs por unidade de n, R² = 0,995
+- depois: a = 11,58 ms, b = -0,0099 µs por unidade de n, R² = 0,089
 
 ![F3 tempo](graficos/f3_tempo.png)
 
-**Formato observado versus previsto.** "Antes" cresce linearmente a partir de S ≈ 1.000, com as duas varreduras e a transferência de S_a nomes. "Depois" fica plano. O número de consultas sobe de 3 para 4: uma ida a mais, constante, em troca de não varrer a tabela.
+**Formato observado versus previsto.**
+- "Antes" é linear em S: R² perto de 1 no ajuste a + b·S, com as duas varreduras e a transferência de S_a nomes.
+- A inclinação entre os dois maiores S fica abaixo de 1 porque o intercepto a (3 idas ao banco) ainda pesa frente a b·S (ver "Como ler as medições").
+- "Depois" tem b ≈ 0 (ou ligeiramente negativo, dentro do ruído): custo constante em S, como prevê o O(log S) com árvore B rasa.
+- O número de consultas sobe de 3 para 4: uma ida a mais, constante, em troca de não varrer a tabela.
 
 ### F4 — favorito de um produto na página de detalhe (`loadProduct`)
 
@@ -572,19 +609,24 @@ Testes:
 
 | n | antes (ms) | depois (ms) | antes ÷ depois | consultas antes | consultas depois | bytes antes | bytes depois |
 |---|---|---|---|---|---|---|---|
-| 10 | 5,44 | 4,71 | 1,2× | 2 | 1 | 6.001 | 96 |
-| 100 | 12,1 | 3,28 | 3,7× | 2 | 1 | 60.461 | 96 |
-| 1.000 | 126 | 4,11 | 30,6× | 2 | 1 | 609.551 | 96 |
-| 10.000 | 646 | 5,20 | 124,2× | 2 | 1 | 6.145.451 | 96 |
-| 100.000 | 9.503 | 4,51 | 2104,7× | 5 | 1 | 61.954.451 | 96 |
+| 10 | 3,61 | 2,57 | 1,4× | 2 | 1 | 6.001 | 96 |
+| 100 | 5,47 | 3,10 | 1,8× | 2 | 1 | 60.461 | 96 |
+| 1.000 | 92,3 | 3,33 | 27,7× | 2 | 1 | 609.551 | 96 |
+| 10.000 | 459 | 2,98 | 153,8× | 2 | 1 | 6.145.451 | 96 |
+| 100.000 | 4.726 | 3,09 | 1527,2× | 5 | 1 | 61.954.451 | 96 |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,17; depois: -0,06.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,01; depois: 0,02.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = 9,61 ms, b = 47,1502 µs por unidade de n, R² = 1,000
+- depois: a = 2,99 ms, b = 0,0011 µs por unidade de n, R² = 0,027
 
 ![F4 tempo](graficos/f4_tempo.png)
 ![F4 bytes](graficos/f4_bytes.png)
 
 **Formato observado versus previsto.**
-- "Antes" é linear em F a partir de F ≈ 1.000, em tempo e em bytes. A inclinação dos bytes no log-log é exatamente 1.
+- "Antes" é linear em F a partir de F ≈ 1.000, em tempo e em bytes. A inclinação dos bytes no log-log é ≈ 1,00.
 - "Depois" é constante: 96 bytes e alguns milissegundos, que são a ida ao banco.
 - Para F ≤ 100, as duas versões ficam na faixa da latência.
 - Com F = 100.000, a versão antiga faz 5 consultas em vez de 2. O Prisma fatia o `IN` do `include` em lotes de até 32.766 parâmetros (achado A10). A classe não muda.
@@ -671,13 +713,18 @@ Testes:
 
 | n | antes (ms) | depois (ms) | antes ÷ depois | consultas antes | consultas depois | bytes antes | bytes depois |
 |---|---|---|---|---|---|---|---|
-| 10 | 4,45 | 3,68 | 1,2× | 2 | 1 | 6.001 | 389 |
-| 100 | 17,9 | 3,50 | 5,1× | 2 | 1 | 60.461 | 389 |
-| 1.000 | 111 | 2,93 | 38,0× | 2 | 1 | 609.551 | 389 |
-| 10.000 | 714 | 5,19 | 137,5× | 2 | 1 | 6.145.451 | 389 |
-| 100.000 | 9.867 | 6,10 | 1618,5× | 5 | 1 | 61.954.451 | 389 |
+| 10 | 2,84 | 3,00 | 0,9× | 2 | 1 | 6.001 | 389 |
+| 100 | 8,39 | 2,07 | 4,0× | 2 | 1 | 60.461 | 389 |
+| 1.000 | 95,6 | 3,78 | 25,3× | 2 | 1 | 609.551 | 389 |
+| 10.000 | 404 | 2,95 | 137,1× | 2 | 1 | 6.145.451 | 389 |
+| 100.000 | 4.475 | 4,46 | 1003,5× | 5 | 1 | 61.954.451 | 389 |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,14; depois: 0,07.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,04; depois: 0,18.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = 4,78 ms, b = 44,6578 µs por unidade de n, R² = 1,000
+- depois: a = 2,91 ms, b = 0,0155 µs por unidade de n, R² = 0,558
 
 ![F5 tempo](graficos/f5_tempo.png)
 ![F5 bytes](graficos/f5_bytes.png)
@@ -779,19 +826,24 @@ Testes:
 
 | n | antes (ms) | depois (ms) | antes ÷ depois | consultas antes | consultas depois |
 |---|---|---|---|---|---|
-| 10 | 30,6 | 42,6 | 0,7× | 16 | 13 |
-| 100 | 50,6 | 35,6 | 1,4× | 17 | 13 |
-| 1.000 | 194 | 43,3 | 4,5× | 16 | 13 |
-| 10.000 | 737 | 68,1 | 10,8× | 17 | 13 |
-| 100.000 | — | 139 | — | — | 14 |
+| 10 | 51,5 | 38,9 | 1,3× | 16 | 13 |
+| 100 | 66,8 | 38,6 | 1,7× | 17 | 13 |
+| 1.000 | 146 | 53,0 | 2,8× | 16 | 13 |
+| 10.000 | 505 | 82,9 | 6,1× | 16 | 13 |
+| 100.000 | — | 177 | — | — | 14 |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 0,58; depois: 0,31.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 0,54; depois: 0,33.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = 71,00 ms, b = 43,6955 µs por unidade de n, R² = 0,989
+- depois: a = 49,24 ms, b = 1,2948 µs por unidade de n, R² = 0,951
 
 ![F6 tempo](graficos/f6_tempo.png)
 
 **Formato observado versus previsto.**
-- "Antes" é linear em L, dominado por transferir e mapear L linhas com o histórico.
-- "Depois" ainda cresce, mas bem mais devagar: é o seq scan do `ILIKE` nas duas ou três consultas, cada uma Θ(N).
+- "Antes" é linear em L: R² perto de 1 no ajuste a + b·L, com b de dezenas de µs por produto local (transferir e mapear cada linha com o histórico). A inclinação entre os dois maiores L fica bem abaixo de 1 porque o intercepto (cerca de 16 consultas, fetch à SerpApi e upserts) é grande frente a b·L até L = 10⁴.
+- "Depois" também é linear, mas com b cerca de 34 vezes menor (1,3 contra 43,7 µs por produto local): é o seq scan do `ILIKE` nas duas ou três consultas, cada uma Θ(N), com custo por linha bem menor que transferir e mapear na aplicação.
 - Isso é exatamente o que a análise prevê: a constante do banco por linha (varrer e comparar) é muito menor que a da aplicação (transferir, criar o objeto e mapear), mas a classe é a mesma.
 - A versão original **falhou com L = 100.000**: o motor do Prisma 5.22 entrou em pânico (`no entry found for key`, `record.rs:69`) ao montar o `include` de 100 mil produtos (achado A11). Por isso a curva "antes" vai só até 10.000.
 
@@ -888,20 +940,25 @@ Teste: `frontend/tests/unit/lib/dashboardMetrics.equivalence.test.ts`, com 6 tam
 
 | n | antes (ms) | depois (ms) | antes ÷ depois |
 |---|---|---|---|
-| 30 | 0,08 | 0,02 | 4,2× |
-| 300 | 0,44 | 0,13 | 3,4× |
-| 3.000 | 6,55 | 2,01 | 3,3× |
-| 30.000 | 46,1 | 18,3 | 2,5× |
-| 300.000 | 588 | 238 | 2,5× |
+| 30 | 0,03 | 0,02 | 2,0× |
+| 300 | 0,27 | 0,09 | 3,2× |
+| 3.000 | 4,14 | 1,86 | 2,2× |
+| 30.000 | 27,8 | 13,8 | 2,0× |
+| 300.000 | 336 | 99,2 | 3,4× |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,11; depois: 1,11.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,08; depois: 0,86.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = -1,18 ms, b = 1,1214 µs por unidade de n, R² = 1,000
+- depois: a = 1,13 ms, b = 0,3277 µs por unidade de n, R² = 0,999
 
 ![F7 tempo](graficos/f7_tempo.png)
 
 **Formato observado versus previsto.**
-- As duas curvas são retas paralelas no log-log, ou seja, a mesma classe, deslocadas por um fator entre 2,5× e 4,2× (tabela), maior nos n pequenos e estável em 2,5× nos grandes. É o formato esperado de uma melhora só de constante.
-- **Speedup acima da contagem de operações.** A contagem previa uma razão perto de 16h : 11h ≈ 1,4, mas as operações não custam o mesmo. O dominante é parsear `new Date(string)`: antes eram 2h + 2a⁺ + 2f parsings (cada janela refazia o parse) e depois h + a⁺ + f, exatamente a metade. Somam-se as alocações dos arrays intermediários (`filter` e `map`), que a versão nova não faz.
-- **Inclinação ligeiramente acima de 1 no último intervalo** (1,11 nas duas versões): de 30 mil para 300 mil elementos os dados saem da cache e o coletor de lixo trabalha mais. É efeito de memória, não de classe, e aparece nas duas curvas.
+- As duas versões são lineares, ambas com R² ≥ 0,999 no ajuste a + b·n. O coeficiente cai de b ≈ 1,12 µs para b ≈ 0,33 µs por elemento (3,4×). As curvas são retas paralelas no log-log: mesma classe, fator constante. É o formato esperado de uma melhora só de constante.
+- O fator ponto a ponto varia entre 2,0× e 3,4× (tabela). Abaixo de 1 ms a medição é sensível ao JIT e ao coletor de lixo; nesta rodada isso também deixa a inclinação entre os dois maiores n em 1,08 antes e 0,86 depois. O ajuste é a leitura mais estável.
+- **Speedup acima da contagem de operações.** A contagem previa algo perto de 16h : 11h ≈ 1,4, mas as operações não custam o mesmo. O dominante é parsear `new Date(string)`: antes eram 2h + 2a⁺ + 2f parsings (cada janela refazia o parse) e depois h + a⁺ + f, exatamente a metade. Somam-se as alocações dos arrays intermediários (`filter` e `map`), que a versão nova não faz.
 
 ### F8 — `buildHistorySeries`
 
@@ -987,48 +1044,64 @@ Teste: `frontend/tests/unit/lib/historySeries.equivalence.test.ts`, com 7 combin
 
 | n | antes (ms) | depois (ms) | antes ÷ depois |
 |---|---|---|---|
-| 10 | 0,04 | 0,02 | 1,8× |
-| 100 | 0,67 | 0,29 | 2,3× |
-| 1.000 | 14,3 | 6,81 | 2,1× |
-| 10.000 | 137 | 27,1 | 5,1× |
-| 100.000 | 2.055 | 471 | 4,4× |
+| 10 | 0,03 | 0,02 | 1,9× |
+| 100 | 0,45 | 0,16 | 2,9× |
+| 1.000 | 6,64 | 1,62 | 4,1× |
+| 10.000 | 99,0 | 18,4 | 5,4× |
+| 100.000 | 2.008 | 518 | 3,9× |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,18; depois: 1,24.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,31; depois: 1,45.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = -27,95 ms, b = 20,2837 µs por unidade de n, R² = 0,998
+- depois: a = -8,91 ms, b = 5,2450 µs por unidade de n, R² = 0,996
 
 **Cenário `decrescente`**
 
 | n | antes (ms) | depois (ms) | antes ÷ depois |
 |---|---|---|---|
-| 10 | 0,10 | 0,07 | 1,5× |
-| 100 | 0,78 | 0,43 | 1,8× |
-| 1.000 | 3,39 | 3,27 | 1,0× |
-| 10.000 | 41,7 | 30,9 | 1,4× |
-| 100.000 | 443 | 353 | 1,3× |
+| 10 | 0,02 | 0,02 | 1,1× |
+| 100 | 0,20 | 0,14 | 1,4× |
+| 1.000 | 2,41 | 1,34 | 1,8× |
+| 10.000 | 23,3 | 24,5 | 0,9× |
+| 100.000 | 289 | 186 | 1,6× |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,03; depois: 1,06.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,10; depois: 0,88.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = -1,49 ms, b = 2,9057 µs por unidade de n, R² = 1,000
+- depois: a = 1,24 ms, b = 1,8564 µs por unidade de n, R² = 0,999
 
 **Cenário `decrescente_com_empates`**
 
 | n | antes (ms) | depois (ms) | antes ÷ depois |
 |---|---|---|---|
-| 10 | 0,03 | 0,04 | 0,8× |
-| 100 | 1,65 | 0,30 | 5,5× |
-| 1.000 | 7,40 | 2,28 | 3,2× |
-| 10.000 | 62,5 | 24,7 | 2,5× |
-| 100.000 | 784 | 271 | 2,9× |
+| 10 | 0,02 | 0,02 | 0,9× |
+| 100 | 0,45 | 0,18 | 2,5× |
+| 1.000 | 4,74 | 1,43 | 3,3× |
+| 10.000 | 45,0 | 14,2 | 3,2× |
+| 100.000 | 549 | 189 | 2,9× |
 
-Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,10; depois: 1,04.
+Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,09; depois: 1,12.
+
+Ajuste linear t(n) = a + b·n por mínimos quadrados sobre todos os pontos:
+
+- antes: a = -2,59 ms, b = 5,5130 µs por unidade de n, R² = 1,000
+- depois: a = -1,23 ms, b = 1,8984 µs por unidade de n, R² = 0,999
 
 ![F8 tempo](graficos/f8_tempo.png)
 
 **Formato observado versus previsto.**
-- **Aleatória:** as duas versões têm inclinação acima de 1 no último intervalo (1,18 antes e 1,24 depois). A previsão para h log h entre 10⁴ e 10⁵ é 1 + log₁₀(log 10⁵ / log 10⁴) ≈ 1,10. As duas ordenam; a nova só tem comparador mais barato (subtração de números já calculados, em vez de 2 `new Date` por comparação). Por isso a diferença é um fator de 4,4–5,1× nos n grandes, sem mudança de inclinação. O excesso sobre 1,10 vem de cache e coletor de lixo com 100 mil objetos.
-- **Estritamente decrescente:** as curvas quase coincidem (fator 1,0–1,8×) e "antes" tem inclinação 1,03. O TimSort detecta a sequência estritamente decrescente e a inverte em Θ(h), como previsto.
-- **Decrescente com empates:** nesta rodada "antes" teve inclinação 1,10, igual à previsão h log h, e "depois" 1,04, perto de linear. Mas uma rodada anterior com os mesmos dados deu 1,02 para "antes". **Divergência:** o termo h log h existe, mas com constante tão pequena que fica dentro do ruído da medição até h = 10⁵.
-  - Com empates, o TimSort quebra a entrada em blocos curtos e os intercala.
-  - Como os blocos já estão em ordem decrescente entre si, o modo *galloping* resolve cada fronteira com O(log) comparações; o que sobra é cópia de memória, barata.
-  - O que se vê com clareza é um fator de 2,5–3,2× para h ≥ 1.000.
-- **Custo de montagem:** em todos os cenários, os dois `toISOString` por entrada (iguais nas duas versões) pesam muito no total. Isso aproxima as inclinações de 1.
+- **Aleatória:** as duas versões ordenam. A nova só tem comparador mais barato (subtração de números já calculados, em vez de 2 `new Date` por comparação), e por isso fica 1,9–5,4× mais rápida sem mudar de classe. A teoria prevê h log h nas duas.
+- **Estritamente decrescente:** as curvas quase coincidem (fator 0,9–1,8×). O TimSort detecta a sequência estritamente decrescente e a inverte em Θ(h), como previsto.
+- **Decrescente com empates:** fator de 2,5–3,3× para h ≥ 100, praticamente constante. **Divergência com a teoria**, que prevê h log h para "antes" e h para "depois":
+  - Com empates, o TimSort quebra a entrada em blocos curtos e os intercala. Como os blocos já estão em ordem decrescente entre si, o modo *galloping* resolve cada fronteira com O(log) comparações; o que sobra é cópia de memória, barata.
+  - Entre 10⁴ e 10⁵ o fator log h cresce só 25%, o que é indistinguível do ruído nesta faixa.
+  - Todas as versões e cenários têm R² ≥ 0,996 no ajuste **linear** a + b·h.
+  - As inclinações entre dois pontos variam de uma rodada para outra. Nesta rodada foram 1,09 antes e 1,12 depois com empates, e 1,31 e 1,45 na entrada aleatória. Em rodada anterior, "antes" com empates deu 1,02 e 1,10. Mostram efeito de cache e de coletor de lixo com 100 mil objetos, não de classe.
+- **Custo de montagem:** os dois `toISOString` por entrada (iguais nas duas versões) pesam muito no total. Isso aproxima as inclinações de 1 e esconde o termo log h.
 
 ---
 
@@ -1062,10 +1135,10 @@ Inclinação no log-log entre os dois maiores n medidos (tempo): antes: 1,10; de
 | Função | Grandeza | Antes | Depois | Evidência medida |
 |---|---|---|---|---|
 | F1 | idas ao banco | Θ(n) | Θ(1) | consultas: 12 → 6 (n = 10) e 11.581 → 6 (n = 10.000); 6 com n = 100.000 |
-| F2 | tempo em D | Θ(D) | O(log N) para página fixa | 145 → 3,4 ms (D = 10⁴) e 1.158 → 5,2 ms (D = 10⁵); inclinação depois 0,18 |
-| F3 | tempo em S (caminho de sucesso) | Θ(S) | O(log S) | 105 → 14,9 ms (S = 10⁴) e 508 → 9,5 ms (S = 10⁵); EXPLAIN com `Index Scan` |
-| F4 | tempo e bytes em F | Θ(F) | O(log F), Θ(1) bytes | 9.503 → 4,5 ms e 62,0 MB → 96 B com F = 10⁵ |
-| F5 | tempo e bytes em F | Θ(F + k) | O(k log F), Θ(k) bytes | 9.867 → 6,1 ms e 62,0 MB → 389 B com F = 10⁵ |
+| F2 | tempo em D | Θ(D) | O(log N) para página fixa | 63,1 → 3,0 ms (D = 10⁴) e 596 → 5,4 ms (D = 10⁵); b ≈ 0,02 µs por linha depois, contra 5,9 µs antes |
+| F3 | tempo em S (caminho de sucesso) | Θ(S) | O(log S) | 58,4 → 12,1 ms (S = 10⁴) e 294 → 10,5 ms (S = 10⁵); b ≈ 0 depois; EXPLAIN com `Index Scan` |
+| F4 | tempo e bytes em F | Θ(F) | O(log F), Θ(1) bytes | 4.726 → 3,1 ms e 62,0 MB → 96 B com F = 10⁵ |
+| F5 | tempo e bytes em F | Θ(F + k) | O(k log F), Θ(k) bytes | 4.475 → 4,5 ms e 62,0 MB → 389 B com F = 10⁵ |
 
 F6, F7 e F8 **não** são contadas: F6 continua Θ(N) no banco, F7 é só constante e F8 muda apenas no melhor caso (e h ≤ 30).
 
@@ -1103,7 +1176,7 @@ O domínio de entrada válida declarado:
 
 Totais: 56 testes de equivalência em banco real no back (`npm run test:equivalence`) e 28 no front (incluídos em `npm run test`), todos verdes.
 
-**E — o ganho aparece no gráfico tempo × n.** Cumprida. Cada função tem um PNG com as duas curvas sobrepostas, em escala linear e log-log, em `docs/complexidade/graficos/`. F1 e F2–F6 também têm consultas × n, e F4/F5 têm bytes × n. Nas funções que mudam de classe, a curva "depois" é horizontal (inclinação ≈ 0 no log-log) enquanto a "antes" tem inclinação ≈ 1. Na F1, a mudança aparece no gráfico de consultas; o tempo segue linear nas duas versões, com coeficientes diferentes.
+**E — o ganho aparece no gráfico tempo × n.** Cumprida. Cada função tem um PNG com as duas curvas sobrepostas, em escala linear e log-log, em `docs/complexidade/graficos/`. F1 e F2–F6 também têm consultas × n, e F4/F5 têm bytes × n. Nas funções que mudam de classe, a curva "depois" é horizontal (b ≈ 0 no ajuste linear) enquanto a "antes" é uma reta com R² ≥ 0,99. Na F1, a mudança aparece no gráfico de consultas; o tempo segue linear nas duas versões, com coeficientes diferentes.
 
 ---
 
@@ -1123,6 +1196,7 @@ Os achados abaixo foram **registrados, mas não corrigidos** (exceto onde indica
 - Só divergem `İ` (U+0130): `"i̇"` no JS e `"i"` no Postgres. Também diverge o sigma final contextual: `"ΣΑΣ".toLowerCase()` dá `"σας"` e o `lower()` dá `"σασ"`.
 - Todos os acentos usados em pt-BR coincidem.
 - Nomes de loja com esses caracteres podem ter resultado diferente na etapa 3. Esse é o limite do domínio de entrada válida declarado para a F3.
+- **Não verificado em produção:** o banco do produto fica no Neon, e o locale/provedor de collation de lá não foi checado (ver A18). Se for diferente de `en_US.utf8`/libc, a comparação precisa ser refeita no próprio Neon antes de considerar a F3 equivalente em produção.
 
 **A4. `mode: "insensitive"` do Prisma gera `ILIKE` sem escapar a entrada.**
 - Em `updateProduct`, um `storeName` igual a `"%"` passa a validação se o usuário tiver qualquer loja ativa.
@@ -1164,52 +1238,42 @@ Os achados abaixo foram **registrados, mas não corrigidos** (exceto onde indica
 
 **A17. A coluna normalizada exige backfill.** Bancos que já existem precisam rodar `npm run db:backfill-normalized-url` uma vez após a migration. Sem isso, produtos excluídos antes da migration não seriam filtrados. O teste `tests/equivalence/backfillNormalizedProductUrl.test.ts` cobre o script.
 
+**A18. O banco de produção fica no Neon; todas as medições foram feitas no Postgres local.**
+- Testes de equivalência e medições rodaram no Postgres 16 do `docker-compose`, em bancos separados (`pricewatch_test`, `pricewatch_bench`). Nada foi executado no Neon.
+- **Latência:** no Neon, cada ida ao banco atravessa a rede até um Postgres gerenciado, com custo bem maior que o c_rt local (< 1 ms). Em F1, F4 e F5 o ganho está em idas e em bytes, então em produção a diferença tende a ser **maior** que a medida. As contagens de consultas e de bytes valem igual nos dois ambientes; os tempos absolutos, não.
+- **Locale:** a equivalência de `lower()` com `toLowerCase()` (F3, A3) foi verificada só no locale local; o do Neon não foi checado.
+- **Deploy:** no Neon é preciso aplicar as duas migrations (`prisma migrate deploy`) e, em seguida, rodar `npm run db:backfill-normalized-url` uma vez (A17).
+
 ---
 
 ## 6. Como reproduzir
 
 Pré-requisitos: Docker Desktop, Node 22 e Python 3 com matplotlib.
 
+Uma vez:
+
 ```bash
 docker compose up -d postgres
 ```
 
-Crie os bancos de teste e de medição (uma vez) e aplique as migrations:
-
 ```bash
-docker exec pricewatch-postgres psql -U pricewatch -d pricewatch -c "CREATE DATABASE pricewatch_test" -c "CREATE DATABASE pricewatch_bench"
+cd backend && npm ci && cp .env.example .env && cd ../frontend && npm ci
 ```
 
-```bash
-cd backend && npm ci && cp .env.example .env
-```
-
-Em `backend/`, aplique as migrations nos dois bancos trocando o nome do banco no `DATABASE_URL` (`pricewatch_test` e `pricewatch_bench`) e rodando `npx prisma migrate deploy`. Depois:
-
-```bash
-npm run test && npm run test:equivalence
-```
+Depois, um único comando na raiz do repositório reproduz tudo:
 
 ```bash
 npm run bench
 ```
 
-```bash
-cd ../frontend && npm ci && npm run test && npm run bench
-```
+Esse comando (`scripts/bench-all.mjs`):
+1. cria `pricewatch_test` e `pricewatch_bench` se não existirem e aplica as migrations nos dois, derivando a URL do `DATABASE_URL` de `backend/.env`;
+2. roda os testes de equivalência em banco real (`npm run test:equivalence`);
+3. roda as medições do back (F1–F6, F2b e o `EXPLAIN` da F3) e do front (F7, F8);
+4. gera os gráficos (`bench/plot.py`) e imprime as tabelas deste relatório (`bench/tables.py`).
 
-Na raiz do repositório:
+Para rodar só algumas medições do back: `cd backend && npm run bench -- f1 f3`.
 
-```bash
-python bench/plot.py
-```
-
-```bash
-python bench/tables.py
-```
-
-- `npm run bench` do back grava `f1`–`f6`, `f2_busca_completa` e `f3_explain.txt`. O do front grava `f7` e `f8`. Também dá para rodar só algumas funções, por exemplo `npm run bench -- f1 f3`.
-- `bench/tables.py` gera as tabelas deste relatório a partir dos CSVs.
-- O `plot.py` lê todos os CSVs e gera os PNGs.
-- Para checar os comentários: `node scripts/check-comments.mjs`.
-- Para preencher a coluna nova em bancos existentes: `npm run db:backfill-normalized-url`.
+Outros comandos:
+- verificação de comentários: `npm run check:comments` na raiz;
+- backfill da coluna nova em bancos existentes: `cd backend && npm run db:backfill-normalized-url`.
