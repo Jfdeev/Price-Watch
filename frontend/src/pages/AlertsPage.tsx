@@ -321,7 +321,6 @@ export function AlertsPage() {
         </Dialog>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6">
           <div className="flex items-center justify-between">
@@ -361,7 +360,6 @@ export function AlertsPage() {
         </Card>
       </div>
 
-      {/* Search and Filter */}
       <Card className="p-6">
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -374,7 +372,6 @@ export function AlertsPage() {
           />
         </div>
 
-        {/* Alerts Table */}
         {filteredAlerts.length === 0 ? (
           <div className="text-center py-12">
             <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -385,7 +382,6 @@ export function AlertsPage() {
           </div>
         ) : (
           <>
-            {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -476,7 +472,6 @@ export function AlertsPage() {
               </Table>
             </div>
 
-            {/* Mobile Cards */}
             <div className="md:hidden space-y-3">
               {filteredAlerts.map((alert) => {
                 const productName = getProductName(alert);
@@ -598,7 +593,6 @@ export function AlertsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* How it works */}
       <Card className="p-6 bg-gradient-to-br from-violet-50 to-indigo-50 border-violet-200">
         <h3 className="font-semibold mb-3">Como os alertas funcionam</h3>
         <ul className="space-y-2 text-sm text-muted-foreground">

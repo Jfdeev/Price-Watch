@@ -32,7 +32,6 @@ export function Footer() {
     <footer className="border-t bg-gray-50/50 mt-auto">
       <div className="container px-4 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600">
@@ -68,7 +67,6 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Product */}
           <div>
             <h3 className="font-semibold mb-4">Produto</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
@@ -93,7 +91,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Company */}
           <div>
             <h3 className="font-semibold mb-4">Empresa</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
@@ -112,7 +109,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Legal */}
           <div>
             <h3 className="font-semibold mb-4">Legal</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">

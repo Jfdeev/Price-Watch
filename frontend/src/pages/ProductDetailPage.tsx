@@ -176,7 +176,7 @@ export function ProductDetailPage() {
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing form state from loaded product
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormValues({
       name: product.name ?? "",
       price: String(product.currentPrice ?? ""),

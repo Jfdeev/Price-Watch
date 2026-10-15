@@ -11,7 +11,7 @@ export async function registerUser(data: { name?: string; email: string; passwor
   }
 
   const usersCount = await prisma.user.count();
-  const role = usersCount === 0 ? "ADMIN" : "USER"; // first user becomes admin
+  const role = usersCount === 0 ? "ADMIN" : "USER";
 
   const hashed = await bcrypt.hash(data.password, 10);
 

@@ -16,7 +16,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing local form state from context
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setName(user?.name ?? "");
   }, [user?.name]);
 

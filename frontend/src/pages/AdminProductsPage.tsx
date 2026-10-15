@@ -88,7 +88,7 @@ export function AdminProductsPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load is async, setState is in callback
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refreshProducts();
     void refreshReferences();
   }, [user?.id]);

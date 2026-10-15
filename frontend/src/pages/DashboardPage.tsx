@@ -103,7 +103,6 @@ export function DashboardPage() {
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Itens acompanhados"
@@ -135,7 +134,6 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* Recent Price Drops */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -198,7 +196,6 @@ export function DashboardPage() {
         </Table>
       </Card>
 
-      {/* Favorite Products */}
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">Favoritos</h2>

@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "../../src/prisma/client";
 
-// Mock productService
 vi.mock("../../src/services/productService", () => ({
   getProductById: vi.fn(),
   upsertProduct: vi.fn(),
