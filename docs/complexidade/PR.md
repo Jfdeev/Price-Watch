@@ -50,7 +50,7 @@ Trabalho complementar de Análise de Algoritmos: oito funções do Price-Watch r
 docker compose up -d postgres
 ```
 
-Crie `pricewatch_test` e `pricewatch_bench` e aplique as migrations neles (passo a passo na seção 6 do relatório). Depois:
+O `npm run bench` da raiz já cria e migra `pricewatch_test`. Para rodar só os testes:
 
 ```bash
 cd backend && npm run test && npm run test:equivalence && npm run lint && npm run typecheck && npm run build
@@ -61,26 +61,22 @@ cd frontend && npm run test && npm run lint && npm run format:check && npm run t
 ```
 
 ```bash
-node scripts/check-comments.mjs
+npm run check:comments
 ```
 
 ## Como medir
 
-```bash
-cd backend && npm run bench
-```
+Com o Postgres do `docker-compose` no ar e as dependências instaladas, rode na raiz:
 
 ```bash
-cd frontend && npm run bench
+npm run bench
 ```
 
-```bash
-python bench/plot.py
-```
-
-```bash
-python bench/tables.py
-```
+O comando (`scripts/bench-all.mjs`):
+1. cria os bancos `pricewatch_test` e `pricewatch_bench` e aplica as migrations;
+2. roda os testes de equivalência;
+3. mede F1–F8;
+4. gera os gráficos e as tabelas.
 
 Os CSVs vão para `docs/complexidade/dados/` e os PNGs para `docs/complexidade/graficos/`.
 
