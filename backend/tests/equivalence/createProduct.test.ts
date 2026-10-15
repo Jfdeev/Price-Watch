@@ -143,6 +143,33 @@ const SCENARIOS: Array<[string, Scenario]> = [
     }
   ],
   [
+    "curinga com loja exata do próprio usuário",
+    {
+      stores: [
+        { name: "Loja_1", owner: "u1", isActive: true },
+        { name: "LojaX1", owner: "u2", isActive: true }
+      ],
+      input: { name: "P", price: 1, storeName: "loja_1" }
+    }
+  ],
+  [
+    "barra invertida no nome sem loja casando pelo ILIKE",
+    {
+      stores: [{ name: String.raw`Loja\Azul`, owner: "u1", isActive: true }],
+      input: { name: "P", price: 1, storeName: String.raw`loja\azul` }
+    }
+  ],
+  [
+    "barra invertida que escapa um curinga",
+    {
+      stores: [
+        { name: String.raw`Loja\%`, owner: "u2", isActive: true },
+        { name: "Loja%", owner: "u1", isActive: true }
+      ],
+      input: { name: "P", price: 1, storeName: String.raw`LOJA\%` }
+    }
+  ],
+  [
     "nome armazenado com espaços",
     {
       stores: [{ name: " Loja Azul ", owner: "u1", isActive: true }],

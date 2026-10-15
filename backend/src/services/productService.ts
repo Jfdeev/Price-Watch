@@ -807,6 +807,30 @@ async function hasActiveStoreNamed(name: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+async function ownsActiveStoreNamed(name: string, userId: string): Promise<boolean> {
+  if (!name.includes("\\")) {
+    const exact = await prisma.$queryRaw<Array<{ found: number }>>(
+      Prisma.sql`SELECT 1 AS found FROM "Store" WHERE "isActive" AND lower("name") = lower(${name}) AND "userId" = ${userId} LIMIT 1`
+    );
+    if (exact.length > 0) {
+      return true;
+    }
+  }
+
+  const ownedStore = await prisma.store.findFirst({
+    where: {
+      name: {
+        equals: name,
+        mode: "insensitive"
+      },
+      userId,
+      isActive: true
+    },
+    select: { id: true }
+  });
+  return ownedStore !== null;
+}
+
 export async function createProduct(input: CreateProductInput): Promise<ProductDTO> {
   const normalizedName = input.name.trim();
 
@@ -831,19 +855,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductD
     throw new Error("A loja selecionada não está ativa ou não existe.");
   }
 
-  const ownedStore = await prisma.store.findFirst({
-    where: {
-      name: {
-        equals: normalizedStoreName,
-        mode: "insensitive"
-      },
-      userId: input.ownerUserId,
-      isActive: true
-    } as any,
-    select: { id: true }
-  });
-
-  if (!ownedStore) {
+  if (!(await ownsActiveStoreNamed(normalizedStoreName, input.ownerUserId))) {
     throw new Error("Selecione uma loja ativa criada por voce.");
   }
 

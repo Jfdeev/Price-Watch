@@ -205,7 +205,7 @@ describe("admin routes", () => {
 
     expect(response.status).toBe(201);
     expect(response.body.id).toBe("prod-1");
-    expect(queryRaw).toHaveBeenCalledTimes(2);
+    expect(queryRaw).toHaveBeenCalledTimes(3);
     queryRaw.mockRestore();
   });
 

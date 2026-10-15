@@ -68,10 +68,47 @@ describe("createProduct: validação de loja (F3)", () => {
   });
 
   it("exige que a loja seja do usuário", async () => {
-    vi.mocked(prisma.$queryRaw).mockResolvedValue([{ found: 1 }] as never);
+    vi.mocked(prisma.$queryRaw)
+      .mockResolvedValueOnce([{ found: 1 }] as never)
+      .mockResolvedValueOnce([{ found: 1 }] as never)
+      .mockResolvedValueOnce([] as never);
     vi.mocked(prisma.store.findFirst).mockResolvedValueOnce(null as never);
 
     await expect(createProduct(input)).rejects.toThrow("Selecione uma loja ativa criada por voce.");
+    expect(rawCall(2).sql).toContain('"userId" =');
+    expect(rawCall(2).values).toEqual(["Loja Azul", "u1"]);
+  });
+
+  it("confirma o dono pelo índice sem recorrer ao ILIKE quando há igualdade exata", async () => {
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([{ found: 1 }] as never);
+
+    await createProduct(input);
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(3);
+    expect(prisma.store.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("recorre ao ILIKE original quando a igualdade exata não encontra a loja", async () => {
+    vi.mocked(prisma.$queryRaw)
+      .mockResolvedValueOnce([{ found: 1 }] as never)
+      .mockResolvedValueOnce([{ found: 1 }] as never)
+      .mockResolvedValueOnce([] as never);
+
+    await createProduct(input);
+
+    expect(prisma.store.findFirst).toHaveBeenCalledWith({
+      where: { name: { equals: "Loja Azul", mode: "insensitive" }, userId: "u1", isActive: true },
+      select: { id: true }
+    });
+  });
+
+  it("usa só o ILIKE original quando o nome tem barra invertida", async () => {
+    vi.mocked(prisma.$queryRaw).mockResolvedValue([{ found: 1 }] as never);
+
+    await createProduct({ ...input, storeName: String.raw`Loja\Azul` });
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(prisma.store.findFirst).toHaveBeenCalledTimes(1);
   });
 
   it("cria o produto quando todas as validações passam", async () => {
