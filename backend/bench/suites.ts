@@ -227,12 +227,20 @@ async function explainStoreLookups(storeName: string): Promise<string> {
       Prisma.sql`SELECT "name" FROM "Store" WHERE "isActive" = true`
     ],
     [
+      "antes: loja ativa do usuário por ILIKE",
+      Prisma.sql`SELECT "id" FROM "Store" WHERE "name" ILIKE ${storeName} AND "userId" = ${"u1"} AND "isActive" = true LIMIT 1`
+    ],
+    [
       "depois: existe loja ativa",
       Prisma.sql`SELECT 1 AS found FROM "Store" WHERE "isActive" LIMIT 1`
     ],
     [
       "depois: loja ativa pelo nome",
       Prisma.sql`SELECT 1 AS found FROM "Store" WHERE "isActive" AND lower("name") = lower(${storeName}) LIMIT 1`
+    ],
+    [
+      "depois: loja ativa do usuário pelo nome",
+      Prisma.sql`SELECT 1 AS found FROM "Store" WHERE "isActive" AND lower("name") = lower(${storeName}) AND "userId" = ${"u1"} LIMIT 1`
     ]
   ];
   for (const [title, statement] of statements) {
