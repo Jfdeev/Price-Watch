@@ -27,9 +27,13 @@ export async function measure(
     if (options.prepare) {
       await options.prepare();
     }
-    const start = performance.now();
-    const counted = await countQueries(run);
-    const elapsed = performance.now() - start;
+    let elapsed = 0;
+    const counted = await countQueries(async () => {
+      const start = performance.now();
+      const result = await run();
+      elapsed = performance.now() - start;
+      return result;
+    });
     if (index >= options.warmup) {
       times.push(elapsed);
       queries.push(counted.queries);

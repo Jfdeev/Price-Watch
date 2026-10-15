@@ -18,10 +18,18 @@ export function attachQueryCounter(): void {
   }
 }
 
+const EVENT_FLUSH_MS = 25;
+
+function flushPendingEvents(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, EVENT_FLUSH_MS));
+}
+
 export async function countQueries<T>(
   run: () => Promise<T>
 ): Promise<{ result: T; queries: number }> {
+  await flushPendingEvents();
   const start = total;
   const result = await run();
+  await flushPendingEvents();
   return { result, queries: total - start };
 }
