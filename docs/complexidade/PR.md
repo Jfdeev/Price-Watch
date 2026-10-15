@@ -38,6 +38,14 @@ Trabalho complementar de Análise de Algoritmos: oito funções do Price-Watch r
 - `20261014120000_add_normalized_product_url`: coluna `normalizedProductUrl` e índice `(isDeleted, normalizedProductUrl)`. **Depois de aplicar, rode `npm run db:backfill-normalized-url` uma vez** nos bancos já existentes.
 - `20261014130000_add_store_active_lower_name_index`: índice funcional parcial `lower(name) WHERE isActive` em `Store`. É SQL manual; o `prisma migrate diff` confirma que o Prisma não o remove.
 
+### Deploy no banco de produção (Neon)
+
+As medições e os testes rodaram no Postgres local; nada foi aplicado no Neon. No deploy:
+
+1. `npx prisma migrate deploy` com o `DATABASE_URL` do Neon (cria a coluna, o índice composto e o índice funcional parcial);
+2. logo em seguida, `npm run db:backfill-normalized-url`. Sem isso, produtos excluídos antes da migration deixam de ser filtrados na busca;
+3. recomendado antes de considerar a F3 equivalente em produção: confirmar o locale do banco no SQL Editor do Neon. A equivalência de `lower()` foi verificada só em `en_US.utf8`/libc (achado A3).
+
 ## API nova
 
 - `GET /favorites/product/:productId` → `{ id, productId }` ou `null` (autenticado).
