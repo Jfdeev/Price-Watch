@@ -67,9 +67,20 @@ function pythonComments(file) {
     .map((line) => `${file}:${line}`);
 }
 
+function cssComments(file) {
+  const lines = readFileSync(path.join(root, file), "utf8").split(/?
+/);
+  return lines.flatMap((line, index) =>
+    line.includes("/*") ? [`${file}:${index + 1}: ${line.trim().slice(0, 80)}`] : []
+  );
+}
+
 const findings = listFiles().flatMap((file) => {
   if (SCRIPT_FILE.test(file)) {
     return scriptComments(file);
+  }
+  if (file.endsWith(".css")) {
+    return cssComments(file);
   }
   if (file.endsWith(".py")) {
     return pythonComments(file);
