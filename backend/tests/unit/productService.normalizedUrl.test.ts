@@ -30,7 +30,12 @@ vi.mock("../../src/prisma/client", () => ({
 }));
 
 import { prisma } from "../../src/prisma/client";
-import { createProduct, updateProduct, upsertProduct } from "../../src/services/productService";
+import {
+  createProduct,
+  findDeletedProductUrls,
+  updateProduct,
+  upsertProduct
+} from "../../src/services/productService";
 
 type DataArgument = { data: Record<string, unknown> };
 type UpsertArgument = { create: Record<string, unknown>; update: Record<string, unknown> };
@@ -98,5 +103,36 @@ describe("normalizedProductUrl em todo ponto de escrita (F2)", () => {
     await updateProduct("db-1", { productUrl }, "u1");
 
     expect(lastData("update").normalizedProductUrl).toBe(expected);
+  });
+});
+
+describe("findDeletedProductUrls (F2)", () => {
+  it("não consulta o banco quando a página não tem URLs", async () => {
+    const findMany = vi.fn();
+    Object.assign(prisma.product, { findMany });
+
+    await expect(findDeletedProductUrls(["", ""])).resolves.toEqual(new Set());
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("consulta só as URLs distintas da página entre os excluídos", async () => {
+    const findMany = vi.fn(async () => [{ normalizedProductUrl: "https://a.test/x" }]);
+    Object.assign(prisma.product, { findMany });
+
+    const result = await findDeletedProductUrls([
+      "https://a.test/x",
+      "",
+      "https://a.test/x",
+      "https://b.test/y"
+    ]);
+
+    expect(result).toEqual(new Set(["https://a.test/x"]));
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        isDeleted: true,
+        normalizedProductUrl: { in: ["https://a.test/x", "https://b.test/y"] }
+      },
+      select: { normalizedProductUrl: true }
+    });
   });
 });

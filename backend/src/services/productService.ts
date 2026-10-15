@@ -412,7 +412,7 @@ type ProductSearchResult = {
   message?: string;
 };
 
-async function findDeletedProductUrls(normalizedUrls: string[]): Promise<Set<string>> {
+export async function findDeletedProductUrls(normalizedUrls: string[]): Promise<Set<string>> {
   const candidates = Array.from(new Set(normalizedUrls.filter((value) => value.length > 0)));
   if (candidates.length === 0) {
     return new Set();
